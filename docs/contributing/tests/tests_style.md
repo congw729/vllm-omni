@@ -139,7 +139,7 @@ vllm_omni/                          tests/
 4. **Documentation**: Add docstrings to all test functions
 5. **Environment variables**: Set uniformly in `conftest.py` or at the top of files
 6. **Type annotations**: Add type annotations to all test function parameters
-7. **Resources**, Using pytest tag to specify the computation resources the test required.
+7. **Pytest Markers**, Using pytest markers to specify the computation resources the test required.
 
 ### Template
 #### E2E - Online serving
@@ -184,6 +184,12 @@ def base64_encoded_video() -> str:
 def dummy_messages_from_video_data(video_data_url: str, content_text: str) -> str:
     xxx
 
+@pytest.mark.core_model
+@pytest.mark.omni
+@pytest.mark.gpu
+@pytest.mark.npu
+@pytest.mark.L4
+@multi_gpu_test(num_gpus=2)
 @pytest.mark.parametrize("omni_server", test_params, indirect=True)
 def test_video_to_audio(
     client: openai.OpenAI,
@@ -239,7 +245,12 @@ test_params = [(model, stage_config) for model in models for stage_config in sta
 
 # function name: test_{input_modality}_to_{output_modality}
 # modality candidate: text, image, audio, video, mixed_modalities
-@pytest.mark.gpu_mem_high  # requires high-memory GPU node
+@pytest.mark.core_model
+@pytest.mark.omni
+@pytest.mark.gpu
+@pytest.mark.npu
+@pytest.mark.L4
+@multi_gpu_test(num_gpus=2)
 @pytest.mark.parametrize("test_config", test_params)
 def test_video_to_audio(omni_runner: type[OmniRunner], model: str) -> None:
     """Offline inference: video input, audio output."""
@@ -263,4 +274,4 @@ def test_video_to_audio(omni_runner: type[OmniRunner], model: str) -> None:
 
 1. The file is saved in an appropriate place and the file name is clear.
 2. The coding style follows the requirements outlined above.
-3. For e2e model test, please ensure the test is configured under the `./buildkite/` folder.
+3. **All test functions have appropriate pytest markers** For e2e model test, please ensure the test is configured under the `./buildkite/` folder.
