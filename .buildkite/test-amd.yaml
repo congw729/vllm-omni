@@ -14,7 +14,7 @@ steps:
     - export VLLM_ROCM_USE_AITER_MHA=1
     - export VLLM_ROCM_USE_AITER_LINEAR=0
     - export VLLM_ROCM_USE_AITER_RMSNORM=0
-    - pytest -s -v -m "e2e and diffusion and rocm"
+    - pytest -s -v -m "core_model and diffusion and rocm"
 
 - label: "Diffusion Cache Backend Test"
   timeout_in_minutes: 15
@@ -32,7 +32,7 @@ steps:
     - export VLLM_ROCM_USE_AITER_MHA=1
     - export VLLM_ROCM_USE_AITER_LINEAR=0
     - export VLLM_ROCM_USE_AITER_RMSNORM=0
-    - pytest -s -v -m "e2e and cache and diffusion and rocm"
+    - pytest -s -v -m "core_model and cache and diffusion and rocm"
 
 - label: "Omni Model Test Qwen2-5-Omni"
   timeout_in_minutes: 15
@@ -50,4 +50,4 @@ steps:
     - export VLLM_ROCM_USE_AITER_MHA=1
     - export VLLM_ROCM_USE_AITER_LINEAR=0
     - export VLLM_ROCM_USE_AITER_RMSNORM=0
-    - pytest -s -v -m "e2e and omni and rocm and not requires_h100"
+    - pytest -s -v -m "core_model and omni and distributed and rocm"
