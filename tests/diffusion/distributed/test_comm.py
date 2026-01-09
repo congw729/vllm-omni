@@ -7,6 +7,7 @@ import os
 import pytest
 import torch
 
+from tests.utils import create_new_process_for_each_test
 from vllm_omni.diffusion.distributed.comm import RingComm, SeqAllToAll4D, SeqAllToAll5D
 from vllm_omni.diffusion.distributed.parallel_state import (
     destroy_distributed_env,
@@ -31,6 +32,9 @@ def update_environment_variables(envs_dict: dict[str, str]):
         os.environ[k] = v
 
 
+@pytest.mark.parallel
+@pytest.mark.diffusion
+@pytest.mark.multi_gpu_4
 @pytest.mark.parametrize("world_size", [2, 4])
 @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
 @pytest.mark.parametrize("batch_size", [2])
@@ -38,6 +42,7 @@ def update_environment_variables(envs_dict: dict[str, str]):
 @pytest.mark.parametrize("num_heads", [8])
 @pytest.mark.parametrize("head_size", [32])
 @pytest.mark.parametrize("use_sync", [False, True])
+@create_new_process_for_each_test()
 def test_4d_identity(
     world_size: int,
     dtype: torch.dtype,
@@ -96,8 +101,10 @@ def _test_4d_identity_worker(
 
     # Initialize distributed environment
     init_distributed_environment()
-    initialize_model_parallel(ulysses_degree=world_size)  # test ulysses sp by default
-    sp_group = get_sp_group().ulysses_group  # get ulysses sp group not ring sp group
+    # test ulysses sp by default
+    initialize_model_parallel(ulysses_degree=world_size)
+    # get ulysses sp group not ring sp group
+    sp_group = get_sp_group().ulysses_group
 
     # Create input tensor: (bs, seqlen/P, hc, hs)
     torch.manual_seed(42 + local_rank)
@@ -160,6 +167,9 @@ def _test_4d_identity_worker(
     destroy_distributed_env()
 
 
+@pytest.mark.parallel
+@pytest.mark.diffusion
+@pytest.mark.multi_gpu_4
 @pytest.mark.parametrize("world_size", [2, 4])
 @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
 @pytest.mark.parametrize("batch_size", [2])
@@ -167,6 +177,7 @@ def _test_4d_identity_worker(
 @pytest.mark.parametrize("num_heads", [8])
 @pytest.mark.parametrize("head_size", [32])
 @pytest.mark.parametrize("use_sync", [False, True])
+@create_new_process_for_each_test()
 def test_5d_identity(
     world_size: int,
     dtype: torch.dtype,
@@ -225,8 +236,10 @@ def _test_5d_identity_worker(
 
     # Initialize distributed environment
     init_distributed_environment()
-    initialize_model_parallel(ulysses_degree=world_size)  # test ulysses sp by default
-    sp_group = get_sp_group().ulysses_group  # get ulysses sp group not ring sp group
+    # test ulysses sp by default
+    initialize_model_parallel(ulysses_degree=world_size)
+    # get ulysses sp group not ring sp group
+    sp_group = get_sp_group().ulysses_group
 
     # Create input tensor: (bs, seqlen/P, 3, hc, hs)
     # The '3' dimension is for Q, K, V
@@ -292,11 +305,15 @@ def _test_5d_identity_worker(
     destroy_distributed_env()
 
 
+@pytest.mark.parallel
+@pytest.mark.diffusion
+@pytest.mark.multi_gpu_4
 @pytest.mark.parametrize("world_size", [2, 4])
 @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
 @pytest.mark.parametrize("batch_size", [2])
 @pytest.mark.parametrize("num_heads", [8])
 @pytest.mark.parametrize("head_size", [128])
+@create_new_process_for_each_test()
 def test_ring_p2p(
     world_size: int,
     dtype: torch.dtype,

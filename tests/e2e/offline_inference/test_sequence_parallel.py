@@ -20,15 +20,17 @@ import torch
 import torch.distributed as dist
 from PIL import Image
 
+from tests.utils import create_new_process_for_each_test, multi_gpu_test
+from vllm_omni import Omni
+from vllm_omni.diffusion.data import DiffusionParallelConfig
+from vllm_omni.diffusion.distributed.parallel_state import device_count
+from vllm_omni.diffusion.envs import get_device_name
+
 # ruff: noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from vllm_omni import Omni
-from vllm_omni.diffusion.data import DiffusionParallelConfig
-from vllm_omni.diffusion.distributed.parallel_state import device_count
-from vllm_omni.diffusion.envs import get_device_name
 
 os.environ["VLLM_TEST_CLEAN_GPU_MEMORY"] = "1"
 
@@ -87,11 +89,18 @@ def _get_images(output):
     return getattr(item, "images", None)
 
 
+@pytest.mark.core_model
+@pytest.mark.parallel
+@pytest.mark.diffusion
+@pytest.mark.gpu
+@multi_gpu_test(num_gpus=2)
 @pytest.mark.parametrize("model_name", models)
 @pytest.mark.parametrize("ulysses_degree", [1, 2])
 @pytest.mark.parametrize("ring_degree", [1, 2])
-@pytest.mark.parametrize("dtype", [torch.bfloat16])  # Only test bfloat16 to reduce CI time
+# Only test bfloat16 to reduce CI time
+@pytest.mark.parametrize("dtype", [torch.bfloat16])
 @pytest.mark.parametrize("attn_backend", ["sdpa"])
+@create_new_process_for_each_test()
 def test_sequence_parallel(
     model_name: str,
     ulysses_degree: int,

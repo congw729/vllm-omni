@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 from vllm.assets.video import VideoAsset
 
+from tests.utils import create_new_process_for_each_test, multi_gpu_test
+
 from .conftest import OmniRunner
 
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
@@ -23,8 +25,14 @@ stage_configs = [str(Path(__file__).parent / "stage_configs" / "qwen3_omni_ci.ya
 test_params = [(model, stage_config) for model in models for stage_config in stage_configs]
 
 
+@pytest.mark.core_model
+@pytest.mark.omni
+@pytest.mark.gpu
+@pytest.mark.H100
+@multi_gpu_test(num_gpus=2)
 @pytest.mark.parametrize("test_config", test_params)
-def test_video_to_audio(omni_runner: type[OmniRunner], test_config) -> None:
+@create_new_process_for_each_test()
+def test_video_to_audio(omni_runner: type[OmniRunner], test_config: tuple[str, str]) -> None:
     """Test processing video, generating audio output."""
     model, stage_config_path = test_config
     with omni_runner(model, seed=42, stage_configs_path=stage_config_path, stage_init_timeout=300) as runner:

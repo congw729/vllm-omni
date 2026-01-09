@@ -4,12 +4,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from tests.utils import create_new_process_for_each_test
 from vllm_omni.distributed.omni_connectors.connectors.shm_connector import SharedMemoryConnector
 from vllm_omni.distributed.omni_connectors.factory import OmniConnectorFactory
 from vllm_omni.distributed.omni_connectors.utils.config import ConnectorSpec
 from vllm_omni.distributed.omni_connectors.utils.serialization import OmniSerializer
 
 
+@pytest.mark.core_model
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_basic_serialization():
     """Test basic msgpack serialization."""
     data = {"key": "value", "list": [1, 2, 3]}
@@ -20,6 +24,9 @@ def test_basic_serialization():
     assert data == deserialized
 
 
+@pytest.mark.core_model
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_tensor_serialization():
     """Test torch.Tensor serialization."""
     import torch
@@ -31,6 +38,9 @@ def test_tensor_serialization():
     assert torch.equal(tensor, deserialized)
 
 
+@pytest.mark.core_model
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_ndarray_serialization():
     """Test numpy.ndarray serialization."""
     import numpy as np
@@ -42,6 +52,9 @@ def test_ndarray_serialization():
     assert np.array_equal(arr, deserialized)
 
 
+@pytest.mark.core_model
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_create_shm_connector():
     """Test creating SharedMemoryConnector via Factory."""
     spec = ConnectorSpec(name="SharedMemoryConnector", extra={"shm_threshold_bytes": 1024})
@@ -50,6 +63,9 @@ def test_create_shm_connector():
     assert connector.threshold == 1024
 
 
+@pytest.mark.core_model
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_create_unknown_connector():
     """Test error when creating unknown connector."""
     spec = ConnectorSpec(name="UnknownConnector")
@@ -63,6 +79,9 @@ def shm_connector():
     return SharedMemoryConnector(config)
 
 
+@pytest.mark.core_model
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_put_get_inline(shm_connector):
     """Test inline transfer for small data."""
     data = {"small": "data"}
@@ -79,6 +98,9 @@ def test_put_get_inline(shm_connector):
     assert size == ret_size
 
 
+@pytest.mark.core_model
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_put_get_shm(shm_connector, monkeypatch):
     """Test SHM transfer logic for large data (Mocked)."""
     # Create data larger than 100 bytes
@@ -112,6 +134,9 @@ def test_put_get_shm(shm_connector, monkeypatch):
     mock_read.assert_called_once_with(mock_handle)
 
 
+@pytest.mark.core_model
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_get_invalid_metadata(shm_connector):
     """Test get with invalid metadata."""
     result = shm_connector.get("stage_0", "stage_1", "req_3", {})

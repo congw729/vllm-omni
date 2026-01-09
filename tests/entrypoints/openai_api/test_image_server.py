@@ -15,6 +15,7 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
+from tests.utils import create_new_process_for_each_test
 from vllm_omni.entrypoints.openai.image_api_utils import (
     encode_image_base64,
     parse_size,
@@ -23,6 +24,9 @@ from vllm_omni.entrypoints.openai.image_api_utils import (
 # Unit Tests
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_parse_size_valid():
     """Test size parsing with valid inputs"""
     assert parse_size("1024x1024") == (1024, 1024)
@@ -32,6 +36,9 @@ def test_parse_size_valid():
     assert parse_size("1024x1792") == (1024, 1792)
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_parse_size_invalid():
     """Test size parsing with invalid inputs"""
     with pytest.raises(ValueError, match="Invalid size format"):
@@ -47,6 +54,9 @@ def test_parse_size_invalid():
         parse_size("x1024")
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_parse_size_negative():
     """Test size parsing with negative or zero dimensions"""
     with pytest.raises(ValueError, match="positive integers"):
@@ -59,6 +69,9 @@ def test_parse_size_negative():
         parse_size("-1024x1024")
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_parse_size_edge_cases():
     """Test size parsing with edge cases like empty strings and non-integers"""
     # Empty string
@@ -77,6 +90,9 @@ def test_parse_size_edge_cases():
         parse_size("1024 1024")
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_encode_image_base64():
     """Test image encoding to base64"""
     # Create a simple test image
@@ -136,6 +152,8 @@ def mock_async_diffusion():
 
 
 @pytest.fixture
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_client(mock_async_diffusion):
     """Create test client with mocked async diffusion engine"""
     from fastapi import FastAPI
@@ -169,12 +187,16 @@ def async_omni_test_client():
     return TestClient(app)
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 @pytest.mark.skip(reason="Async API server uses different health check mechanism")
 def test_health_endpoint(test_client):
     """Test health check endpoint - skipped for async server"""
     pass
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_generate_single_image(test_client):
     """Test generating a single image"""
     response = test_client.post(
@@ -201,6 +223,8 @@ def test_generate_single_image(test_client):
     assert img.size == (64, 64)  # Our mock returns 64x64 images
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_generate_images_async_omni_sampling_params(async_omni_test_client):
     """Test AsyncOmni path uses per-stage sampling params."""
     response = async_omni_test_client.post(
@@ -224,6 +248,8 @@ def test_generate_images_async_omni_sampling_params(async_omni_test_client):
     assert captured[1]["seed"] == 7
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_generate_multiple_images(test_client):
     """Test generating multiple images"""
     response = test_client.post(
@@ -246,6 +272,8 @@ def test_generate_multiple_images(test_client):
         assert img.format == "PNG"
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_with_negative_prompt(test_client):
     """Test with negative prompt"""
     response = test_client.post(
@@ -259,6 +287,8 @@ def test_with_negative_prompt(test_client):
     assert response.status_code == 200
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_with_seed(test_client):
     """Test with seed for reproducibility"""
     response = test_client.post(
@@ -272,6 +302,8 @@ def test_with_seed(test_client):
     assert response.status_code == 200
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_with_custom_parameters(test_client):
     """Test with custom diffusion parameters"""
     response = test_client.post(
@@ -287,6 +319,8 @@ def test_with_custom_parameters(test_client):
     assert response.status_code == 200
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_invalid_size(test_client):
     """Test with invalid size parameter - rejected by Pydantic"""
     response = test_client.post(
@@ -304,6 +338,8 @@ def test_invalid_size(test_client):
     assert "size" in detail.lower() or "invalid" in detail.lower()
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_invalid_size_parse_error(test_client):
     """Test with malformed size - passes Pydantic but fails parse_size()"""
     response = test_client.post(
@@ -319,6 +355,8 @@ def test_invalid_size_parse_error(test_client):
     assert "size" in detail.lower() or "invalid" in detail.lower()
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_missing_prompt(test_client):
     """Test with missing required prompt field"""
     response = test_client.post(
@@ -331,6 +369,8 @@ def test_missing_prompt(test_client):
     assert response.status_code == 422
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_invalid_n_parameter(test_client):
     """Test with invalid n parameter (out of range)"""
     # n < 1
@@ -354,6 +394,8 @@ def test_invalid_n_parameter(test_client):
     assert response.status_code == 422
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_url_response_format_not_supported(test_client):
     """Test that URL format returns error"""
     response = test_client.post(
@@ -370,6 +412,8 @@ def test_url_response_format_not_supported(test_client):
     assert "b64_json" in detail.lower() or "response" in detail.lower()
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_model_not_loaded():
     """Test error when diffusion engine is not initialized"""
     from fastapi import FastAPI
@@ -392,6 +436,8 @@ def test_model_not_loaded():
     assert "not initialized" in response.json()["detail"].lower()
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_different_image_sizes(test_client):
     """Test various valid image sizes"""
     sizes = ["256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"]
@@ -407,6 +453,8 @@ def test_different_image_sizes(test_client):
         assert response.status_code == 200, f"Failed for size {size}"
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_parameter_validation():
     """Test Pydantic model validation"""
     from vllm_omni.entrypoints.openai.protocol.images import ImageGenerationRequest
@@ -438,6 +486,8 @@ def test_parameter_validation():
 # Pass-Through Tests
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_parameters_passed_through(test_client, mock_async_diffusion):
     """Verify all parameters passed through without modification"""
     response = test_client.post(
@@ -461,6 +511,8 @@ def test_parameters_passed_through(test_client, mock_async_diffusion):
     assert call_kwargs["seed"] == 42
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_optional_parameters_omitted(test_client, mock_async_diffusion):
     """Verify optional parameters not passed when omitted"""
     response = test_client.post(
@@ -480,6 +532,8 @@ def test_optional_parameters_omitted(test_client, mock_async_diffusion):
     assert "true_cfg_scale" not in call_kwargs
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_model_field_omitted_works(test_client):
     """Test that omitting model field works"""
     response = test_client.post(

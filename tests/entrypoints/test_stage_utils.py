@@ -3,6 +3,7 @@ import sys
 
 import pytest
 
+from tests.utils import create_new_process_for_each_test
 from vllm_omni.entrypoints.stage_utils import set_stage_devices
 
 
@@ -42,7 +43,10 @@ def _make_dummy_torch(call_log):
     return _Torch
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 @pytest.mark.usefixtures("clean_gpu_memory_between_tests")
+@create_new_process_for_each_test()
 def test_set_stage_devices_respects_logical_ids(monkeypatch):
     # Preserve an existing logical mapping and ensure devices "0,1" map through it.
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "6,7")

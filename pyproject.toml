@@ -151,12 +151,27 @@ addopts = [
     "--cov-report=xml",
 ]
 markers = [
-    "unit: Unit tests",
-    "integration: Integration tests",
+    # ci/cd required
+    "core_model: Core model tests (run in each PR)",
+    # function module markers
+    "diffusion: Diffusion model tests",
+    "omni: Omni model tests",
+    "cache: Cache backend tests",
+    "parallel: Parallelism/distributed tests",
+    # platform markers
+    "cpu: Tests that run on CPU",
+    "gpu: Tests that run on GPU",
+    "rocm: Tests that run on AMD/ROCm",
+    "npu: Tests that run on NPU/Ascend",
+    # specified computation resources marks
+    "H100: Tests that require H100 GPU",
+    "L4: Tests that require L4 GPU",
+    "distributed: Tests that require multi cards",
+    "skipif: Skip if the num of cards is less than the required",
+    # more detailed markers
+    "slow: Slow tests (may skip in quick CI)",
     "benchmark: Benchmark tests",
-    "slow: Slow tests",
-    "core_model: enable this model test in each PR instead of only nightly",
-]
+    ]
 
 [tool.typos.default]
 extend-ignore-identifiers-re = [

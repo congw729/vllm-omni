@@ -139,7 +139,161 @@ vllm_omni/                          tests/
 4. **Documentation**: Add docstrings to all test functions
 5. **Environment variables**: Set uniformly in `conftest.py` or at the top of files
 6. **Type annotations**: Add type annotations to all test function parameters
-7. **Resources**, Using pytest tag to specify the computation resources the test required.
+7. **Pytest Markers**, Using pytest markers to specify the computation resources the test required.
+
+<details>
+
+<summary><strong>About Pytest Markers</strong></summary>
+
+To enable unified test management and flexible test selection in CI, all test functions must be marked with appropriate pytest markers. Markers are defined in `pyproject.toml` and should be used consistently across all test files.
+
+
+### Marker Categories
+
+Markers are organized into four categories:
+
+#### 1. Test Level Markers
+
+These markers indicate the test type and execution requirements:
+
+- **`@pytest.mark.unit`**: Unit tests that are fast and do not require GPU
+  - Use for: Mocked tests, pure logic tests, utility function tests
+  - Example: `tests/entrypoints/test_stage_utils.py`
+
+- **`@pytest.mark.e2e`**: End-to-end tests that can run on GPU
+  - Use for: Full model inference tests, integration tests with real models
+  - Example: `tests/e2e/offline_inference/test_qwen2_5_omni.py`
+
+- **`@pytest.mark.integration`**: Integration tests (currently not widely used)
+
+#### 2. Function Module Markers
+
+These markers indicate which functional module the test belongs to:
+
+- **`@pytest.mark.diffusion`**: Tests for diffusion models
+  - Use for: T2I, T2V, image generation tests
+  - Example: `tests/e2e/offline_inference/test_t2i_model.py`
+
+- **`@pytest.mark.omni`**: Tests for omni models
+  - Use for: Multi-modal omni model tests
+  - Example: `tests/e2e/offline_inference/test_qwen2_5_omni.py`
+
+- **`@pytest.mark.cache`**: Tests for cache backends
+  - Use for: Cache-DIT, TeaCache tests
+  - Example: `tests/e2e/offline_inference/test_cache_dit.py`
+
+- **`@pytest.mark.parallel`**: Tests for parallelism/distributed functionality
+  - Use for: Sequence parallel, distributed communication tests
+  - Example: `tests/e2e/offline_inference/test_sequence_parallel.py`
+
+#### 3. Platform Markers
+
+These markers indicate the hardware platform requirements:
+
+- **`@pytest.mark.cpu`**: Tests that run on CPU only
+  - Use for: All unit tests that don't require GPU
+  - Example: `tests/entrypoints/test_stage_utils.py`
+
+- **`@pytest.mark.gpu`**: Tests that run on GPU (CUDA)
+  - Use for: E2E tests that require GPU
+  - Example: `tests/e2e/offline_inference/test_t2i_model.py`
+
+- **`@pytest.mark.rocm`**: Tests that run on AMD/ROCm
+  - Use for: Tests compatible with ROCm platform
+  - Example: `tests/e2e/offline_inference/test_qwen2_5_omni.py`
+
+- **`@pytest.mark.npu`**: Tests that run on NPU/Ascend
+  - Use for: Tests compatible with NPU platform
+  - Example: `tests/e2e/offline_inference/test_qwen2_5_omni.py`
+
+- **`@pytest.mark.requires_h100`**: Tests that require H100 GPU
+  - Use for: Large model tests that need H100's high memory
+  - Example: `tests/e2e/online_serving/test_qwen3_omni.py`
+
+- **`@pytest.mark.multi_gpu_4`**: Tests that require multiple (4) GPUs
+  - Use for: Parallel/distributed tests
+  - Example: `tests/e2e/offline_inference/test_sequence_parallel.py`
+
+#### 4. Test Feature Markers
+
+These markers indicate special test characteristics:
+
+- **`@pytest.mark.core_model`**: Core model tests that run in each PR
+  - Use for: Critical model tests that should be run frequently
+  - Example: `tests/e2e/offline_inference/test_qwen2_5_omni.py`
+
+- **`@pytest.mark.slow`**: Slow tests that may be skipped in quick CI
+  - Use for: Long-running tests (currently not widely used)
+
+- **`@pytest.mark.benchmark`**: Benchmark tests (currently not widely used)
+
+### Marker Usage Rules
+
+1. **Every test function must have at least one test level marker** (`unit` or `e2e`)
+
+2. **Every test function must have at least one platform marker** (`cpu`, `gpu`, `rocm`, `npu`, `requires_h100`, or `multi_gpu_4`)
+
+3. **Add function module markers** when applicable:
+   - Diffusion model tests: add `@pytest.mark.diffusion`
+   - Omni model tests: add `@pytest.mark.omni`
+   - Cache backend tests: add `@pytest.mark.cache`
+   - Parallel/distributed tests: add `@pytest.mark.parallel`
+
+4. **Multiple markers can be combined** using logical operators:
+   ```python
+   @pytest.mark.e2e
+   @pytest.mark.omni
+   @pytest.mark.gpu
+   @pytest.mark.rocm
+   @pytest.mark.npu
+   @pytest.mark.core_model
+   def test_mixed_modalities_to_audio(...):
+       ...
+   ```
+
+5. **Markers should be placed before `@pytest.mark.parametrize`**:
+   ```python
+   @pytest.mark.e2e
+   @pytest.mark.diffusion
+   @pytest.mark.gpu
+   @pytest.mark.parametrize("model_name", models)
+   def test_diffusion_model(model_name: str):
+       ...
+   ```
+
+### CI Test Selection
+
+With markers in place, CI configurations can select tests using marker expressions:
+
+```bash
+# Run all unit tests
+pytest -m "unit"
+
+# Run all E2E tests
+pytest -m "e2e"
+
+# Run diffusion model tests
+pytest -m "e2e and diffusion"
+
+# Run tests compatible with ROCm
+pytest -m "e2e and rocm"
+
+# Run core model tests (excluding H100-only tests)
+pytest -m "e2e and omni and core_model and not requires_h100"
+
+# Run parallel tests
+pytest -m "e2e and parallel and multi_gpu_4"
+```
+
+### Best Practices
+
+1. **Be specific**: Add all relevant markers to accurately describe the test
+2. **Be consistent**: Use the same marker combination for similar tests
+3. **Platform compatibility**: If a test runs on multiple platforms, add all applicable platform markers
+4. **Don't over-mark**: Only add markers that are relevant to the test
+5. **Document exceptions**: If a test doesn't fit standard patterns, add a comment explaining why
+
+</details>
 
 ### Template
 #### E2E - Online serving
@@ -184,6 +338,10 @@ def base64_encoded_video() -> str:
 def dummy_messages_from_video_data(video_data_url: str, content_text: str) -> str:
     xxx
 
+@pytest.mark.e2e
+@pytest.mark.omni
+@pytest.mark.requires_h100
+@pytest.mark.core_model
 @pytest.mark.parametrize("omni_server", test_params, indirect=True)
 def test_video_to_audio(
     client: openai.OpenAI,
@@ -239,7 +397,10 @@ test_params = [(model, stage_config) for model in models for stage_config in sta
 
 # function name: test_{input_modality}_to_{output_modality}
 # modality candidate: text, image, audio, video, mixed_modalities
-@pytest.mark.gpu_mem_high  # requires high-memory GPU node
+@pytest.mark.e2e
+@pytest.mark.omni
+@pytest.mark.requires_h100
+@pytest.mark.core_model
 @pytest.mark.parametrize("test_config", test_params)
 def test_video_to_audio(omni_runner: type[OmniRunner], model: str) -> None:
     """Offline inference: video input, audio output."""
@@ -263,4 +424,5 @@ def test_video_to_audio(omni_runner: type[OmniRunner], model: str) -> None:
 
 1. The file is saved in an appropriate place and the file name is clear.
 2. The coding style follows the requirements outlined above.
-3. For e2e model test, please ensure the test is configured under the `./buildkite/` folder.
+3. **All test functions have appropriate pytest markers** (at least one test level marker and one platform marker).
+4. For e2e model test, please ensure the test is configured under the `./buildkite/` folder.

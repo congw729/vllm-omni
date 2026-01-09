@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from tests.utils import create_new_process_for_each_test
 from vllm_omni.entrypoints.stage_utils import SHUTDOWN_TASK
 
 # Suppress noisy DeprecationWarnings from optional Swig bindings imported by vLLM dependencies.
@@ -442,6 +443,9 @@ def mock_get_config(monkeypatch):
     )
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_initialize_stage_configs_called_when_none(monkeypatch, fake_stage_config):
     """Test that stage configs are auto-loaded when stage_configs_path is None."""
 
@@ -507,6 +511,9 @@ def test_initialize_stage_configs_called_when_none(monkeypatch, fake_stage_confi
     assert len(omni._stages_ready) == 2
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_generate_raises_on_length_mismatch(monkeypatch, fake_stage_config):
     """Test that generate raises ValueError when sampling_params_list length doesn't match."""
 
@@ -556,6 +563,9 @@ def test_generate_raises_on_length_mismatch(monkeypatch, fake_stage_config):
         omni.generate(prompts=["hi"], sampling_params_list=[])
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_generate_pipeline_and_final_outputs(monkeypatch, fake_stage_config):
     """Test multi-stage generation pipeline with queue polling."""
     stage_cfg0 = dict(fake_stage_config)
@@ -653,6 +663,9 @@ def test_generate_pipeline_and_final_outputs(monkeypatch, fake_stage_config):
     assert omni.stage_list[1].process_engine_inputs([], []) is not None
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_generate_no_final_output_returns_empty(monkeypatch, fake_stage_config):
     """Test that generate returns empty list when all stages have final_output=False."""
     stage_cfg0 = dict(fake_stage_config)
@@ -727,6 +740,9 @@ def test_generate_no_final_output_returns_empty(monkeypatch, fake_stage_config):
     assert outputs == []
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_generate_sampling_params_none_use_default(monkeypatch, fake_stage_config):
     """Test that generate uses default sampling params when sampling_params_list is None."""
     stage_cfg0 = dict(fake_stage_config)
@@ -799,6 +815,9 @@ def test_generate_sampling_params_none_use_default(monkeypatch, fake_stage_confi
     omni.generate(prompts=["p"], sampling_params_list=None)
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_wait_for_stages_ready_timeout(monkeypatch, fake_stage_config):
     """Test that _wait_for_stages_ready handles timeout correctly."""
 
@@ -855,6 +874,9 @@ def test_wait_for_stages_ready_timeout(monkeypatch, fake_stage_config):
     assert len(omni._stages_ready) == 0
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_generate_handles_error_messages(monkeypatch, fake_stage_config):
     """Test that generate handles error messages from stages correctly."""
 
@@ -931,6 +953,9 @@ def test_generate_handles_error_messages(monkeypatch, fake_stage_config):
     assert len(outputs) == 1
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_close_sends_shutdown_signal(monkeypatch, fake_stage_config):
     """Test that close() sends shutdown signal to all input queues."""
 

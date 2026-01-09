@@ -20,6 +20,8 @@ import pytest
 from vllm.assets.video import VideoAsset
 from vllm.utils import get_open_port
 
+from tests.utils import create_new_process_for_each_test, multi_gpu_test
+
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 
 models = ["Qwen/Qwen3-Omni-30B-A3B-Instruct"]
@@ -81,7 +83,8 @@ class OmniServer:
         self.proc = subprocess.Popen(
             cmd,
             env=env,
-            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # Set working directory to vllm-omni root
+            # Set working directory to vllm-omni root
+            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             start_new_session=True,
             preexec_fn=preexec_fn,
         )
@@ -186,7 +189,13 @@ def dummy_messages_from_video_data(
     ]
 
 
+@pytest.mark.core_model
+@pytest.mark.omni
+@pytest.mark.gpu
+@pytest.mark.H100
+@multi_gpu_test(num_gpus=2)
 @pytest.mark.parametrize("omni_server", test_params, indirect=True)
+@create_new_process_for_each_test()
 def test_video_to_audio_concurrent(
     client: openai.OpenAI,
     omni_server,
@@ -219,7 +228,8 @@ def test_video_to_audio_concurrent(
     assert len(chat_completions) == num_concurrent_requests
 
     for chat_completion in chat_completions:
-        assert len(chat_completion.choices) == 2  # 1 for text output, 1 for audio output
+        # 1 for text output, 1 for audio output
+        assert len(chat_completion.choices) == 2
 
         # Verify text output
         text_choice = chat_completion.choices[0]

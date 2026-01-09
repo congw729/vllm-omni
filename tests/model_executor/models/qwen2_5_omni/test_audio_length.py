@@ -3,7 +3,12 @@
 
 import pytest
 
+from tests.utils import create_new_process_for_each_test
 
+
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_resolve_max_mel_frames_default():
     from vllm_omni.model_executor.models.qwen2_5_omni.audio_length import resolve_max_mel_frames
 
@@ -11,6 +16,9 @@ def test_resolve_max_mel_frames_default():
     assert resolve_max_mel_frames(None, default=6000) == 6000
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_resolve_max_mel_frames_explicit():
     from vllm_omni.model_executor.models.qwen2_5_omni.audio_length import resolve_max_mel_frames
 
@@ -20,9 +28,12 @@ def test_resolve_max_mel_frames_explicit():
     assert resolve_max_mel_frames(0, default=30000) == 0
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 @pytest.mark.parametrize("repeats", [2, 4])
 @pytest.mark.parametrize("code_len", [0, 1, 32768])
 @pytest.mark.parametrize("max_mel_frames", [None, -1, 0, 1, 6000, 30000])
+@create_new_process_for_each_test()
 def test_cap_and_align_mel_length_no_mismatch(repeats, code_len, max_mel_frames):
     """Guard that any max_mel_frames yields a mel length aligned to repeats, and
     consistent with the truncated code length (prevents concat mismatch).

@@ -16,6 +16,8 @@ def mock_objects():
     return {"connector": MagicMock(), "metrics": MagicMock(), "queue_fn": MagicMock()}
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_send_success(mock_objects):
     """Test try_send_via_connector success path."""
     # Setup
@@ -73,6 +75,8 @@ def test_send_success(mock_objects):
     mock_metrics.on_forward.assert_called_once()
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_send_fail(mock_objects):
     """Test try_send_via_connector when connector fails."""
     mock_connector = mock_objects["connector"]
@@ -97,6 +101,8 @@ def test_send_fail(mock_objects):
     mock_queue_fn.assert_not_called()
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_recv_success(mock_objects):
     """Test try_recv_via_connector success path."""
     mock_connector = mock_objects["connector"]
@@ -129,6 +135,8 @@ def test_recv_success(mock_objects):
     mock_connector.get.assert_called_once_with("0", "1", "req_recv", metadata={"handle": "xyz"})
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_recv_no_connector():
     """Test recv fails when no connector exists for edge."""
     task = {"request_id": "req_missing", "from_connector": True, "from_stage": "0"}
@@ -138,6 +146,8 @@ def test_recv_no_connector():
     assert inputs is None
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_shm_connector_flow():
     """
     Verify the full flow: Send -> Adapter -> Connector -> Adapter -> Recv.
@@ -193,6 +203,8 @@ def test_shm_connector_flow():
     assert decoded_inputs == inputs
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_get_connectors_for_stage():
     """Test filtering logic for stage config."""
     # Config has edges: 0->1, 1->2
@@ -217,6 +229,8 @@ def test_get_connectors_for_stage():
     assert stage_2_config["from_stage_1"]["spec"]["name"] == "C2"
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
 def test_recv_with_missing_metadata():
     """Test recv when queue payload is malformed (missing metadata)."""
     # Connector expects metadata but task doesn't have it

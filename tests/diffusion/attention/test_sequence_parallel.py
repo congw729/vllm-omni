@@ -8,6 +8,7 @@ import pytest
 import torch
 from vllm.platforms import current_platform
 
+from tests.utils import create_new_process_for_each_test, multi_gpu_test
 from vllm_omni.diffusion.attention.layer import Attention
 from vllm_omni.diffusion.data import (
     DiffusionParallelConfig,
@@ -134,6 +135,10 @@ class TestMultiLayerAttentionModel(torch.nn.Module):
         return hidden_states
 
 
+@pytest.mark.core_model
+@pytest.mark.parallel
+@pytest.mark.diffusion
+@multi_gpu_test(num_gpus=4)
 @pytest.mark.parametrize(
     "test_model_cls",
     [
@@ -147,11 +152,13 @@ class TestMultiLayerAttentionModel(torch.nn.Module):
 @pytest.mark.parametrize("num_heads", [8])
 @pytest.mark.parametrize("head_size", [8])
 @pytest.mark.parametrize("causal", [False])
-@pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])  # [torch.float16, torch.bfloat16]
+# [torch.float16, torch.bfloat16]
+@pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
 @pytest.mark.parametrize("use_sync", [False])
 @pytest.mark.parametrize("dynamic", [False])
 @pytest.mark.parametrize("use_compile", [False])
 @pytest.mark.parametrize("attn_backend", ["sdpa", "flash_attn"])
+@create_new_process_for_each_test()
 def test_sequence_parallel(
     ulysses_degree: int,
     ring_degree: int,

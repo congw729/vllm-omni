@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from vllm.inputs import PromptType
 
+from tests.utils import create_new_process_for_each_test, multi_gpu_test
 from vllm_omni.entrypoints.async_omni import AsyncOmni, ClientRequestState
 
 SEED = 42
@@ -53,6 +54,12 @@ async def generate(
 
 
 @pytest.mark.asyncio
+@pytest.mark.core_model
+@pytest.mark.omni
+@pytest.mark.gpu
+@pytest.mark.H100
+@multi_gpu_test(num_gpus=2)
+@create_new_process_for_each_test()
 async def test_abort():
     with ExitStack() as after:
         engine = AsyncOmni(model=model, stage_configs_path=stage_config)
@@ -101,6 +108,12 @@ async def test_abort():
 
 
 @pytest.mark.asyncio
+@pytest.mark.core_model
+@pytest.mark.omni
+@pytest.mark.gpu
+@pytest.mark.H100
+@multi_gpu_test(num_gpus=2)
+@create_new_process_for_each_test()
 async def test_build_and_log_summary(monkeypatch):
     from vllm_omni.entrypoints.utils import get_final_stage_id_for_e2e
 

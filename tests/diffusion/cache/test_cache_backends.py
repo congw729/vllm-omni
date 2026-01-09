@@ -15,6 +15,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from tests.utils import create_new_process_for_each_test
 from vllm_omni.diffusion.cache.cache_dit_backend import (
     CacheDiTBackend,
 )
@@ -26,6 +27,9 @@ from vllm_omni.diffusion.data import DiffusionCacheConfig
 class TestCacheDiTBackend:
     """Test CacheDiTBackend implementation."""
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_init_with_dict(self):
         """Test initialization with dictionary config."""
         config_dict = {"Fn_compute_blocks": 4, "max_warmup_steps": 8}
@@ -34,6 +38,9 @@ class TestCacheDiTBackend:
         assert backend.config.max_warmup_steps == 8
         assert backend.enabled is False
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_init_with_config_object(self):
         """Test initialization with DiffusionCacheConfig object."""
         config = DiffusionCacheConfig(Fn_compute_blocks=4)
@@ -41,6 +48,9 @@ class TestCacheDiTBackend:
         assert backend.config.Fn_compute_blocks == 4
         assert backend.enabled is False
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.cache_dit_backend.cache_dit")
     def test_enable_single_transformer(self, mock_cache_dit):
         """Test enabling cache-dit on single-transformer pipeline."""
@@ -62,6 +72,9 @@ class TestCacheDiTBackend:
         assert backend._refresh_func is not None
         mock_cache_dit.enable_cache.assert_called_once()
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.cache_dit_backend.cache_dit")
     def test_refresh(self, mock_cache_dit):
         """Test refreshing cache context with SCM mask policy updates when num_inference_steps changes."""
@@ -124,6 +137,9 @@ class TestCacheDiTBackend:
 class TestTeaCacheBackend:
     """Test TeaCacheBackend implementation."""
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_init(self):
         """Test initialization."""
         config = DiffusionCacheConfig(rel_l1_thresh=0.3)
@@ -131,6 +147,9 @@ class TestTeaCacheBackend:
         assert backend.config.rel_l1_thresh == 0.3
         assert backend.enabled is False
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.teacache.backend.apply_teacache_hook")
     def test_enable(self, mock_apply_hook):
         """Test enabling TeaCache on pipeline."""
@@ -149,6 +168,9 @@ class TestTeaCacheBackend:
         assert backend.enabled is True
         mock_apply_hook.assert_called_once()
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.teacache.backend.apply_teacache_hook")
     def test_enable_with_coefficients(self, mock_apply_hook):
         """Test enabling TeaCache with custom coefficients."""
@@ -165,6 +187,9 @@ class TestTeaCacheBackend:
         assert backend.enabled is True
         mock_apply_hook.assert_called_once()
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.teacache.backend.apply_teacache_hook")
     def test_refresh(self, mock_apply_hook):
         """Test refreshing TeaCache state."""
@@ -193,6 +218,9 @@ class TestTeaCacheBackend:
 class TestCacheSelector:
     """Test cache backend selector function."""
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_get_cache_backend_none(self):
         """Test getting None backend."""
         backend = get_cache_backend(None, None)
@@ -201,6 +229,9 @@ class TestCacheSelector:
         backend = get_cache_backend("none", None)
         assert backend is None
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_get_cache_backend_cache_dit(self):
         """Test getting cache-dit backend."""
         config_dict = {"Fn_compute_blocks": 4}
@@ -208,6 +239,9 @@ class TestCacheSelector:
         assert isinstance(backend, CacheDiTBackend)
         assert backend.config.Fn_compute_blocks == 4
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_get_cache_backend_tea_cache(self):
         """Test getting teacache backend."""
         config_dict = {"rel_l1_thresh": 0.3}
@@ -215,6 +249,9 @@ class TestCacheSelector:
         assert isinstance(backend, TeaCacheBackend)
         assert backend.config.rel_l1_thresh == 0.3
 
+    @pytest.mark.core_model
+    @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_get_cache_backend_invalid(self):
         """Test getting invalid backend raises error."""
         with pytest.raises(ValueError, match="Unsupported cache backend"):

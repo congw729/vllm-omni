@@ -15,13 +15,15 @@ from pathlib import Path
 import pytest
 import torch
 
+from tests.utils import create_new_process_for_each_test
+from vllm_omni import Omni
+from vllm_omni.outputs import OmniRequestOutput
+
 # ruff: noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from vllm_omni import Omni
-from vllm_omni.outputs import OmniRequestOutput
 
 os.environ["VLLM_TEST_CLEAN_GPU_MEMORY"] = "1"
 
@@ -29,7 +31,13 @@ os.environ["VLLM_TEST_CLEAN_GPU_MEMORY"] = "1"
 models = ["riverclouds/qwen_image_random"]
 
 
+@pytest.mark.core_model
+@pytest.mark.cache
+@pytest.mark.diffusion
+@pytest.mark.gpu
+@pytest.mark.rocm
 @pytest.mark.parametrize("model_name", models)
+@create_new_process_for_each_test()
 def test_teacache(model_name: str):
     """Test TeaCache backend with diffusion model."""
     # Configure TeaCache with default settings for fast testing

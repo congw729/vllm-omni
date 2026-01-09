@@ -11,6 +11,8 @@ from unittest.mock import MagicMock
 import pytest
 from vllm.sampling_params import SamplingParams
 
+from tests.utils import create_new_process_for_each_test
+
 
 @pytest.fixture
 def mock_comprehension_stage():
@@ -97,6 +99,9 @@ def mock_request():
 # =============================================================================
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_openai_sampling_fields_contains_expected_fields():
     """Test that _OPENAI_SAMPLING_FIELDS contains all expected OpenAI params."""
     from vllm_omni.entrypoints.openai.serving_chat import OmniOpenAIServingChat
@@ -118,6 +123,9 @@ def test_openai_sampling_fields_contains_expected_fields():
 # =============================================================================
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_preserves_yaml_defaults_when_no_request_params(serving_chat, mock_request):
     """Test that YAML defaults are preserved when request has no params."""
     result = serving_chat._build_sampling_params_list_from_request(mock_request)
@@ -132,6 +140,9 @@ def test_preserves_yaml_defaults_when_no_request_params(serving_chat, mock_reque
     assert comprehension_params.repetition_penalty == 1.05  # YAML custom param preserved
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_request_temperature_overrides_yaml_default(serving_chat, mock_request):
     """Test that request temperature overrides YAML default."""
     mock_request.temperature = 0.8
@@ -144,6 +155,9 @@ def test_request_temperature_overrides_yaml_default(serving_chat, mock_request):
     assert comprehension_params.top_k == 1  # YAML custom param preserved
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_request_top_p_overrides_yaml_default(serving_chat, mock_request):
     """Test that request top_p overrides YAML default."""
     mock_request.top_p = 0.95
@@ -155,6 +169,9 @@ def test_request_top_p_overrides_yaml_default(serving_chat, mock_request):
     assert comprehension_params.temperature == 0.4  # Preserved from YAML
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_request_max_tokens_overrides_yaml_default(serving_chat, mock_request):
     """Test that request max_tokens overrides YAML default."""
     mock_request.max_tokens = 100
@@ -164,6 +181,9 @@ def test_request_max_tokens_overrides_yaml_default(serving_chat, mock_request):
     assert result[0].max_tokens == 100
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_max_tokens_uses_yaml_default_when_not_specified(serving_chat, mock_request):
     """Test that max_tokens falls back to YAML default when not in request."""
     result = serving_chat._build_sampling_params_list_from_request(mock_request)
@@ -171,6 +191,9 @@ def test_max_tokens_uses_yaml_default_when_not_specified(serving_chat, mock_requ
     assert result[0].max_tokens == 2048
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_request_seed_overrides_yaml_default(serving_chat, mock_request):
     """Test that request seed overrides YAML default."""
     mock_request.seed = 123
@@ -182,6 +205,9 @@ def test_request_seed_overrides_yaml_default(serving_chat, mock_request):
     assert comprehension_params.temperature == 0.4  # Preserved from YAML
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_request_frequency_penalty_overrides(serving_chat, mock_request):
     """Test that request frequency_penalty is applied."""
     mock_request.frequency_penalty = 0.5
@@ -191,6 +217,9 @@ def test_request_frequency_penalty_overrides(serving_chat, mock_request):
     assert result[0].frequency_penalty == 0.5
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_request_presence_penalty_overrides(serving_chat, mock_request):
     """Test that request presence_penalty is applied."""
     mock_request.presence_penalty = 0.3
@@ -200,6 +229,9 @@ def test_request_presence_penalty_overrides(serving_chat, mock_request):
     assert result[0].presence_penalty == 0.3
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_non_comprehension_stages_use_cloned_defaults(serving_chat, mock_request):
     """Test that non-comprehension stages always use cloned YAML defaults."""
     mock_request.max_tokens = 50
@@ -208,12 +240,17 @@ def test_non_comprehension_stages_use_cloned_defaults(serving_chat, mock_request
     result = serving_chat._build_sampling_params_list_from_request(mock_request)
 
     other_params = result[1]
-    assert other_params.temperature == 0.9  # YAML default (not affected by request)
-    assert other_params.max_tokens == 4096  # YAML default (not affected by request)
+    # YAML default (not affected by request)
+    assert other_params.temperature == 0.9
+    # YAML default (not affected by request)
+    assert other_params.max_tokens == 4096
     assert other_params.top_k == 50  # YAML default
     assert other_params.seed == 42  # YAML default
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_multiple_params_override_together(serving_chat, mock_request):
     """Test that multiple request params can override together."""
     mock_request.max_tokens = 200
@@ -234,6 +271,9 @@ def test_multiple_params_override_together(serving_chat, mock_request):
     assert comprehension_params.repetition_penalty == 1.05
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_yaml_custom_params_not_overridden_by_request(serving_chat, mock_request):
     """Test that YAML custom params (top_k, repetition_penalty) are not affected."""
     # Even if request has these attributes, they should not override YAML
@@ -253,6 +293,9 @@ def test_yaml_custom_params_not_overridden_by_request(serving_chat, mock_request
 # =============================================================================
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_apply_request_overrides_clones_params(serving_chat, mock_request, default_comprehension_params):
     """Test that _apply_request_overrides returns a cloned object."""
     result = serving_chat._apply_request_overrides(default_comprehension_params, mock_request)
@@ -260,6 +303,9 @@ def test_apply_request_overrides_clones_params(serving_chat, mock_request, defau
     assert result is not default_comprehension_params  # Different object
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_apply_request_overrides_preserves_defaults(serving_chat, mock_request, default_comprehension_params):
     """Test that _apply_request_overrides preserves defaults when request has None."""
     result = serving_chat._apply_request_overrides(default_comprehension_params, mock_request)
@@ -270,6 +316,9 @@ def test_apply_request_overrides_preserves_defaults(serving_chat, mock_request, 
     assert result.top_k == 1  # YAML custom param
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_apply_request_overrides_applies_values(serving_chat, mock_request, default_comprehension_params):
     """Test that _apply_request_overrides applies non-None request values."""
     mock_request.temperature = 0.8
@@ -288,6 +337,9 @@ def test_apply_request_overrides_applies_values(serving_chat, mock_request, defa
 # =============================================================================
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_get_comprehension_stage_index_finds_first_stage(mock_engine_client):
     """Test finding comprehension stage when it's at index 0."""
     from vllm_omni.entrypoints.openai.serving_chat import OmniOpenAIServingChat
@@ -298,6 +350,9 @@ def test_get_comprehension_stage_index_finds_first_stage(mock_engine_client):
     assert instance._get_comprehension_stage_index() == 0
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_get_comprehension_stage_index_finds_second_stage():
     """Test finding comprehension stage when it's at index 1."""
     from vllm_omni.entrypoints.openai.serving_chat import OmniOpenAIServingChat
@@ -315,6 +370,9 @@ def test_get_comprehension_stage_index_finds_second_stage():
     assert instance._get_comprehension_stage_index() == 1
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_get_comprehension_stage_index_raises_when_not_found():
     """Test that ValueError is raised when no comprehension stage exists."""
     from vllm_omni.entrypoints.openai.serving_chat import OmniOpenAIServingChat

@@ -19,6 +19,8 @@ from PIL import Image
 from vllm.assets.image import ImageAsset
 from vllm.utils import get_open_port
 
+from tests.utils import create_new_process_for_each_test
+
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 
 models = ["Qwen/Qwen-Image-Edit-2509"]
@@ -66,7 +68,8 @@ class OmniServer:
         self.proc = subprocess.Popen(
             cmd,
             env=env,
-            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),  # Set working directory to vllm-omni root
+            # Set working directory to vllm-omni root
+            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             start_new_session=True,
         )
 
@@ -172,7 +175,12 @@ def _decode_data_url_to_image_bytes(data_url: str) -> bytes:
     return base64.b64decode(b64_data)
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@pytest.mark.gpu
+@pytest.mark.H100
 @pytest.mark.parametrize("omni_server", test_params, indirect=True)
+@create_new_process_for_each_test()
 def test_i2i_multi_image_input_qwen_image_edit_2509(
     client: openai.OpenAI,
     omni_server,

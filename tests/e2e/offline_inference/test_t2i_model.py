@@ -5,6 +5,8 @@ from pathlib import Path
 import pytest
 import torch
 
+from tests.utils import create_new_process_for_each_test
+from vllm_omni import Omni
 from vllm_omni.outputs import OmniRequestOutput
 from vllm_omni.utils.platform_utils import is_npu, is_rocm
 
@@ -13,7 +15,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from vllm_omni import Omni
 
 os.environ["VLLM_TEST_CLEAN_GPU_MEMORY"] = "1"
 
@@ -32,7 +33,12 @@ elif is_rocm():
     models = ["Tongyi-MAI/Z-Image-Turbo"]
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@pytest.mark.gpu
+@pytest.mark.rocm
 @pytest.mark.parametrize("model_name", models)
+@create_new_process_for_each_test()
 def test_diffusion_model(model_name: str):
     m = Omni(model=model_name)
     # high resolution may cause OOM on L4

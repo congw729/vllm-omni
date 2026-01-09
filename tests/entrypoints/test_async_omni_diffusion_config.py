@@ -1,10 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 
+import pytest
+
+from tests.utils import create_new_process_for_each_test
 from vllm_omni.entrypoints import omni as omni_module
 from vllm_omni.entrypoints.async_omni import AsyncOmni
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_default_stage_config_includes_cache_backend(monkeypatch):
     """Ensure cache_backend/cache_config are preserved in default diffusion stage."""
     monkeypatch.setattr(omni_module, "load_stage_configs_from_model", lambda model, base_engine_args=None: [])
@@ -35,6 +41,9 @@ def test_default_stage_config_includes_cache_backend(monkeypatch):
     assert ulysses_degree == 2
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_default_cache_config_used_when_missing(monkeypatch):
     """Ensure default cache_config is applied when cache_backend is set."""
     monkeypatch.setattr(omni_module, "load_stage_configs_from_model", lambda model, base_engine_args=None: [])
@@ -53,6 +62,9 @@ def test_default_cache_config_used_when_missing(monkeypatch):
     assert cache_config["Fn_compute_blocks"] == 1
 
 
+@pytest.mark.unit
+@pytest.mark.cpu
+@create_new_process_for_each_test()
 def test_default_stage_devices_from_sequence_parallel(monkeypatch):
     """Ensure devices list reflects sequence parallel size when no parallel_config is provided."""
     monkeypatch.setattr(omni_module, "load_stage_configs_from_model", lambda model, base_engine_args=None: [])
