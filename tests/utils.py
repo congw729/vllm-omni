@@ -297,22 +297,23 @@ def create_new_process_for_each_test(
     return spawn_new_process_for_each_test
 
 
-def multi_gpu_marks(*, num_gpus: int):
-    """Get a collection of pytest marks to apply for `@multi_gpu_test`."""
-    test_selector = pytest.mark.distributed(num_gpus=num_gpus)
+def multi_card_marks(*, num_cards: int):
+    """Get a collection of pytest marks to apply for `@multi_card_test`."""
+    test_selector = pytest.mark.distributed(num_cards=num_cards)
+    # TODO: add NPU support
     test_skipif = pytest.mark.skipif(
-        cuda_device_count_stateless() < num_gpus,
-        reason=f"Need at least {num_gpus} GPUs to run the test.",
+        cuda_device_count_stateless() < num_cards,
+        reason=f"Need at least {num_cards} GPUs to run the test.",
     )
 
     return [test_selector, test_skipif]
 
 
-def multi_gpu_test(*, num_gpus: int):
+def multi_card_test(*, num_cards: int):
     """
-    Decorate a test to be run only when multiple GPUs are available.
+    Decorate a test to be run only when multiple cards are available.
     """
-    marks = multi_gpu_marks(num_gpus=num_gpus)
+    marks = multi_card_marks(num_cards=num_cards)
 
     def wrapper(f: Callable[_P, None]) -> Callable[_P, None]:
         func = create_new_process_for_each_test()(f)
