@@ -19,6 +19,7 @@ os.environ["VLLM_TEST_CLEAN_GPU_MEMORY"] = "1"
 models = ["Wan-AI/Wan2.2-T2V-A14B-Diffusers"]
 
 
+@pytest.mark.core_model
 @pytest.mark.diffusion
 @pytest.mark.gpu
 @pytest.mark.L4
