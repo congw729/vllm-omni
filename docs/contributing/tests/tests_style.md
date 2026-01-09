@@ -155,6 +155,7 @@ from pathlib import Path
 import pytest
 import openai
 
+from tests.utils import multi_card_test
 
 # Optional: set process start method for workers
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
@@ -189,7 +190,7 @@ def dummy_messages_from_video_data(video_data_url: str, content_text: str) -> st
 @pytest.mark.gpu
 @pytest.mark.npu
 @pytest.mark.L4
-@multi_gpu_test(num_gpus=2)
+@multi_card_test(num_cards=2)
 @pytest.mark.parametrize("omni_server", test_params, indirect=True)
 def test_video_to_audio(
     client: openai.OpenAI,
@@ -232,6 +233,7 @@ from pathlib import Path
 import pytest
 from vllm.assets.video import VideoAsset
 
+from tests.utils import multi_card_test
 from ..multi_stages.conftest import OmniRunner
 
 # Optional: set process start method for workers
@@ -250,7 +252,7 @@ test_params = [(model, stage_config) for model in models for stage_config in sta
 @pytest.mark.gpu
 @pytest.mark.npu
 @pytest.mark.L4
-@multi_gpu_test(num_gpus=2)
+@multi_card_test(num_cards=2)
 @pytest.mark.parametrize("test_config", test_params)
 def test_video_to_audio(omni_runner: type[OmniRunner], model: str) -> None:
     """Offline inference: video input, audio output."""
