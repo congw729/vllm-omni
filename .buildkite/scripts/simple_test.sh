@@ -49,4 +49,4 @@ VENV_PYTHON="${VENV_DIR}/bin/python"
 
 "${UV_BIN}" pip install --python "${VENV_PYTHON}" vllm==0.12.0
 "${UV_BIN}" pip install --python "${VENV_PYTHON}" -e ".[dev]"
-"${VENV_PYTHON}" -m pytest -v -s -m "unit and cpu"
+"${VENV_PYTHON}" -m pytest -v -s -m "core_model and cpu"
