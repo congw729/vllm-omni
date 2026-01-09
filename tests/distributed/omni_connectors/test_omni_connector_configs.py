@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.utils import create_new_process_for_each_test
+
 # Use the new import path for initialization utilities
 from vllm_omni.distributed.omni_connectors.utils.initialization import load_omni_transfer_config
 
@@ -36,10 +38,11 @@ def get_config_files():
 config_files = get_config_files()
 
 
-@pytest.mark.unit
+@pytest.mark.omni
 @pytest.mark.cpu
 @pytest.mark.skipif(len(config_files) == 0, reason="No config files found or directory missing")
 @pytest.mark.parametrize("yaml_file", config_files, ids=lambda p: p.name)
+@create_new_process_for_each_test()
 def test_load_qwen_yaml_configs(yaml_file):
     """
     Scan and test loading of all qwen*.yaml config files.

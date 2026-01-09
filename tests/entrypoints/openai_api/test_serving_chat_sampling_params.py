@@ -99,7 +99,6 @@ def mock_request():
 # =============================================================================
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_openai_sampling_fields_contains_expected_fields():
@@ -123,7 +122,6 @@ def test_openai_sampling_fields_contains_expected_fields():
 # =============================================================================
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_preserves_yaml_defaults_when_no_request_params(serving_chat, mock_request):
@@ -140,7 +138,6 @@ def test_preserves_yaml_defaults_when_no_request_params(serving_chat, mock_reque
     assert comprehension_params.repetition_penalty == 1.05  # YAML custom param preserved
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_request_temperature_overrides_yaml_default(serving_chat, mock_request):
@@ -155,7 +152,6 @@ def test_request_temperature_overrides_yaml_default(serving_chat, mock_request):
     assert comprehension_params.top_k == 1  # YAML custom param preserved
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_request_top_p_overrides_yaml_default(serving_chat, mock_request):
@@ -169,7 +165,6 @@ def test_request_top_p_overrides_yaml_default(serving_chat, mock_request):
     assert comprehension_params.temperature == 0.4  # Preserved from YAML
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_request_max_tokens_overrides_yaml_default(serving_chat, mock_request):
@@ -181,7 +176,6 @@ def test_request_max_tokens_overrides_yaml_default(serving_chat, mock_request):
     assert result[0].max_tokens == 100
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_max_tokens_uses_yaml_default_when_not_specified(serving_chat, mock_request):
@@ -191,7 +185,6 @@ def test_max_tokens_uses_yaml_default_when_not_specified(serving_chat, mock_requ
     assert result[0].max_tokens == 2048
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_request_seed_overrides_yaml_default(serving_chat, mock_request):
@@ -205,7 +198,6 @@ def test_request_seed_overrides_yaml_default(serving_chat, mock_request):
     assert comprehension_params.temperature == 0.4  # Preserved from YAML
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_request_frequency_penalty_overrides(serving_chat, mock_request):
@@ -217,7 +209,6 @@ def test_request_frequency_penalty_overrides(serving_chat, mock_request):
     assert result[0].frequency_penalty == 0.5
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_request_presence_penalty_overrides(serving_chat, mock_request):
@@ -229,7 +220,6 @@ def test_request_presence_penalty_overrides(serving_chat, mock_request):
     assert result[0].presence_penalty == 0.3
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_non_comprehension_stages_use_cloned_defaults(serving_chat, mock_request):
@@ -248,7 +238,6 @@ def test_non_comprehension_stages_use_cloned_defaults(serving_chat, mock_request
     assert other_params.seed == 42  # YAML default
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_multiple_params_override_together(serving_chat, mock_request):
@@ -271,7 +260,6 @@ def test_multiple_params_override_together(serving_chat, mock_request):
     assert comprehension_params.repetition_penalty == 1.05
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_yaml_custom_params_not_overridden_by_request(serving_chat, mock_request):
@@ -293,7 +281,6 @@ def test_yaml_custom_params_not_overridden_by_request(serving_chat, mock_request
 # =============================================================================
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_apply_request_overrides_clones_params(serving_chat, mock_request, default_comprehension_params):
@@ -303,7 +290,6 @@ def test_apply_request_overrides_clones_params(serving_chat, mock_request, defau
     assert result is not default_comprehension_params  # Different object
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_apply_request_overrides_preserves_defaults(serving_chat, mock_request, default_comprehension_params):
@@ -316,7 +302,6 @@ def test_apply_request_overrides_preserves_defaults(serving_chat, mock_request, 
     assert result.top_k == 1  # YAML custom param
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_apply_request_overrides_applies_values(serving_chat, mock_request, default_comprehension_params):
@@ -337,7 +322,6 @@ def test_apply_request_overrides_applies_values(serving_chat, mock_request, defa
 # =============================================================================
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_get_comprehension_stage_index_finds_first_stage(mock_engine_client):
@@ -350,7 +334,6 @@ def test_get_comprehension_stage_index_finds_first_stage(mock_engine_client):
     assert instance._get_comprehension_stage_index() == 0
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_get_comprehension_stage_index_finds_second_stage():
@@ -370,7 +353,6 @@ def test_get_comprehension_stage_index_finds_second_stage():
     assert instance._get_comprehension_stage_index() == 1
 
 
-@pytest.mark.unit
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_get_comprehension_stage_index_raises_when_not_found():

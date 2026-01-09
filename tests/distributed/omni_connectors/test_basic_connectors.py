@@ -11,7 +11,7 @@ from vllm_omni.distributed.omni_connectors.utils.config import ConnectorSpec
 from vllm_omni.distributed.omni_connectors.utils.serialization import OmniSerializer
 
 
-@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_basic_serialization():
@@ -24,7 +24,7 @@ def test_basic_serialization():
     assert data == deserialized
 
 
-@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_tensor_serialization():
@@ -38,7 +38,7 @@ def test_tensor_serialization():
     assert torch.equal(tensor, deserialized)
 
 
-@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_ndarray_serialization():
@@ -52,7 +52,7 @@ def test_ndarray_serialization():
     assert np.array_equal(arr, deserialized)
 
 
-@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_create_shm_connector():
@@ -63,7 +63,7 @@ def test_create_shm_connector():
     assert connector.threshold == 1024
 
 
-@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_create_unknown_connector():
@@ -79,7 +79,7 @@ def shm_connector():
     return SharedMemoryConnector(config)
 
 
-@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_put_get_inline(shm_connector):
@@ -98,7 +98,7 @@ def test_put_get_inline(shm_connector):
     assert size == ret_size
 
 
-@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_put_get_shm(shm_connector, monkeypatch):
@@ -134,7 +134,7 @@ def test_put_get_shm(shm_connector, monkeypatch):
     mock_read.assert_called_once_with(mock_handle)
 
 
-@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_get_invalid_metadata(shm_connector):

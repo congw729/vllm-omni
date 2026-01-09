@@ -443,7 +443,8 @@ def mock_get_config(monkeypatch):
     )
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_initialize_stage_configs_called_when_none(monkeypatch, fake_stage_config):
@@ -511,7 +512,8 @@ def test_initialize_stage_configs_called_when_none(monkeypatch, fake_stage_confi
     assert len(omni._stages_ready) == 2
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_generate_raises_on_length_mismatch(monkeypatch, fake_stage_config):
@@ -563,7 +565,8 @@ def test_generate_raises_on_length_mismatch(monkeypatch, fake_stage_config):
         omni.generate(prompts=["hi"], sampling_params_list=[])
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_generate_pipeline_and_final_outputs(monkeypatch, fake_stage_config):
@@ -663,7 +666,8 @@ def test_generate_pipeline_and_final_outputs(monkeypatch, fake_stage_config):
     assert omni.stage_list[1].process_engine_inputs([], []) is not None
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_generate_no_final_output_returns_empty(monkeypatch, fake_stage_config):
@@ -740,7 +744,8 @@ def test_generate_no_final_output_returns_empty(monkeypatch, fake_stage_config):
     assert outputs == []
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_generate_sampling_params_none_use_default(monkeypatch, fake_stage_config):
@@ -815,7 +820,8 @@ def test_generate_sampling_params_none_use_default(monkeypatch, fake_stage_confi
     omni.generate(prompts=["p"], sampling_params_list=None)
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_wait_for_stages_ready_timeout(monkeypatch, fake_stage_config):
@@ -874,7 +880,8 @@ def test_wait_for_stages_ready_timeout(monkeypatch, fake_stage_config):
     assert len(omni._stages_ready) == 0
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_generate_handles_error_messages(monkeypatch, fake_stage_config):
@@ -953,7 +960,8 @@ def test_generate_handles_error_messages(monkeypatch, fake_stage_config):
     assert len(outputs) == 1
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_close_sends_shutdown_signal(monkeypatch, fake_stage_config):

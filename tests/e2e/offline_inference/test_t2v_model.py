@@ -19,9 +19,9 @@ os.environ["VLLM_TEST_CLEAN_GPU_MEMORY"] = "1"
 models = ["Wan-AI/Wan2.2-T2V-A14B-Diffusers"]
 
 
-@pytest.mark.core_model
 @pytest.mark.diffusion
 @pytest.mark.gpu
+@pytest.mark.L4
 @multi_gpu_test(num_gpus=2)
 @pytest.mark.parametrize("model_name", models)
 @create_new_process_for_each_test()

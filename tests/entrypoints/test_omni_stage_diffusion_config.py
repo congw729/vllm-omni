@@ -7,7 +7,8 @@ from tests.utils import create_new_process_for_each_test
 from vllm_omni.entrypoints.omni_stage import _build_od_config
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.diffusion
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_build_od_config_includes_diffusion_fields():
@@ -24,7 +25,8 @@ def test_build_od_config_includes_diffusion_fields():
     assert od_config["vae_use_slicing"] is True
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.diffusion
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_build_od_config_respects_explicit_config():

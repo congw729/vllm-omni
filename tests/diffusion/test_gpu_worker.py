@@ -15,6 +15,7 @@ from unittest.mock import Mock, patch
 import pytest
 import torch
 
+from tests.utils import create_new_process_for_each_test, multi_gpu_test
 from vllm_omni.diffusion.worker.gpu_worker import GPUWorker
 
 
@@ -45,6 +46,12 @@ def mock_gpu_worker(mock_od_config):
 class TestGPUWorkerLoadWeights:
     """Test GPUWorker.load_weights method."""
 
+    @pytest.mark.core_model
+    @pytest.mark.diffusion
+    @pytest.mark.gpu
+    @pytest.mark.L4
+    @multi_gpu_test(num_gpus=4)
+    @create_new_process_for_each_test()
     def test_load_weights_calls_pipeline(self, mock_gpu_worker):
         """Test that load_weights delegates to pipeline.load_weights."""
         # Setup mock weights
@@ -64,6 +71,12 @@ class TestGPUWorkerLoadWeights:
         mock_gpu_worker.pipeline.load_weights.assert_called_once_with(mock_weights)
         assert result == expected_loaded
 
+    @pytest.mark.core_model
+    @pytest.mark.diffusion
+    @pytest.mark.gpu
+    @pytest.mark.L4
+    @multi_gpu_test(num_gpus=4)
+    @create_new_process_for_each_test()
     def test_load_weights_empty_iterable(self, mock_gpu_worker):
         """Test load_weights with empty weights iterable."""
         mock_gpu_worker.pipeline.load_weights = Mock(return_value=set())
@@ -77,8 +90,14 @@ class TestGPUWorkerLoadWeights:
 class TestGPUWorkerSleep:
     """Test GPUWorker.sleep method."""
 
+    @pytest.mark.core_model
+    @pytest.mark.diffusion
+    @pytest.mark.gpu
+    @pytest.mark.L4
+    @multi_gpu_test(num_gpus=4)
     @patch("vllm_omni.diffusion.worker.gpu_worker.torch.cuda.mem_get_info")
     @patch("vllm.device_allocator.cumem.CuMemAllocator")
+    @create_new_process_for_each_test()
     def test_sleep_level_1(self, mock_allocator_class, mock_mem_info, mock_gpu_worker):
         """Test sleep mode level 1 (offload weights only)."""
         # Setup memory info mocks
@@ -103,8 +122,14 @@ class TestGPUWorkerSleep:
         # Verify buffers were NOT saved (level 1 doesn't save buffers)
         assert len(mock_gpu_worker._sleep_saved_buffers) == 0
 
+    @pytest.mark.core_model
+    @pytest.mark.diffusion
+    @pytest.mark.gpu
+    @pytest.mark.L4
+    @multi_gpu_test(num_gpus=4)
     @patch("vllm_omni.diffusion.worker.gpu_worker.torch.cuda.mem_get_info")
     @patch("vllm.device_allocator.cumem.CuMemAllocator")
+    @create_new_process_for_each_test()
     def test_sleep_level_2(self, mock_allocator_class, mock_mem_info, mock_gpu_worker):
         """Test sleep mode level 2 (offload all, save buffers)."""
         # Setup memory info mocks
@@ -140,8 +165,14 @@ class TestGPUWorkerSleep:
         assert "buffer1" in mock_gpu_worker._sleep_saved_buffers
         assert "buffer2" in mock_gpu_worker._sleep_saved_buffers
 
+    @pytest.mark.core_model
+    @pytest.mark.diffusion
+    @pytest.mark.gpu
+    @pytest.mark.L4
+    @multi_gpu_test(num_gpus=4)
     @patch("vllm_omni.diffusion.worker.gpu_worker.torch.cuda.mem_get_info")
     @patch("vllm.device_allocator.cumem.CuMemAllocator")
+    @create_new_process_for_each_test()
     def test_sleep_memory_freed_validation(self, mock_allocator_class, mock_mem_info, mock_gpu_worker):
         """Test that sleep validates memory was actually freed."""
         # Simulate memory increase (should trigger assertion error)
@@ -162,7 +193,13 @@ class TestGPUWorkerSleep:
 class TestGPUWorkerWakeUp:
     """Test GPUWorker.wake_up method."""
 
+    @pytest.mark.core_model
+    @pytest.mark.diffusion
+    @pytest.mark.gpu
+    @pytest.mark.L4
+    @multi_gpu_test(num_gpus=4)
     @patch("vllm.device_allocator.cumem.CuMemAllocator")
+    @create_new_process_for_each_test()
     def test_wake_up_without_buffers(self, mock_allocator_class, mock_gpu_worker):
         """Test wake_up without saved buffers (level 1 sleep)."""
         # Setup allocator mock
@@ -180,7 +217,13 @@ class TestGPUWorkerWakeUp:
         mock_allocator.wake_up.assert_called_once_with(["weights"])
         assert result is True
 
+    @pytest.mark.core_model
+    @pytest.mark.diffusion
+    @pytest.mark.gpu
+    @pytest.mark.L4
+    @multi_gpu_test(num_gpus=4)
     @patch("vllm.device_allocator.cumem.CuMemAllocator")
+    @create_new_process_for_each_test()
     def test_wake_up_with_buffers(self, mock_allocator_class, mock_gpu_worker):
         """Test wake_up with saved buffers (level 2 sleep)."""
         # Setup allocator mock
@@ -223,7 +266,13 @@ class TestGPUWorkerWakeUp:
         assert len(mock_gpu_worker._sleep_saved_buffers) == 0
         assert result is True
 
+    @pytest.mark.core_model
+    @pytest.mark.diffusion
+    @pytest.mark.gpu
+    @pytest.mark.L4
+    @multi_gpu_test(num_gpus=4)
     @patch("vllm.device_allocator.cumem.CuMemAllocator")
+    @create_new_process_for_each_test()
     def test_wake_up_partial_buffer_restore(self, mock_allocator_class, mock_gpu_worker):
         """Test wake_up only restores buffers that were saved."""
         # Setup allocator mock

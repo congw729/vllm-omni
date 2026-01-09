@@ -138,6 +138,8 @@ class TestMultiLayerAttentionModel(torch.nn.Module):
 @pytest.mark.core_model
 @pytest.mark.parallel
 @pytest.mark.diffusion
+@pytest.mark.gpu
+@pytest.mark.L4
 @multi_gpu_test(num_gpus=4)
 @pytest.mark.parametrize(
     "test_model_cls",

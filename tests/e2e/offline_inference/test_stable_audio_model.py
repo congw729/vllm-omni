@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 import torch
 
+from tests.utils import create_new_process_for_each_test
 from vllm_omni.outputs import OmniRequestOutput
 
 # ruff: noqa: E402
@@ -21,7 +22,12 @@ os.environ["VLLM_TEST_CLEAN_GPU_MEMORY"] = "1"
 models = ["linyueqian/stable_audio_random"]
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@pytest.mark.gpu
+@pytest.mark.L4
 @pytest.mark.parametrize("model_name", models)
+@create_new_process_for_each_test()
 def test_stable_audio_model(model_name: str):
     m = Omni(model=model_name)
 

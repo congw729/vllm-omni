@@ -36,6 +36,7 @@ models = ["riverclouds/qwen_image_random"]
 @pytest.mark.diffusion
 @pytest.mark.gpu
 @pytest.mark.rocm
+@pytest.mark.L4
 @pytest.mark.parametrize("model_name", models)
 @create_new_process_for_each_test()
 def test_cache_dit(model_name: str):

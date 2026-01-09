@@ -93,7 +93,8 @@ def _get_images(output):
 @pytest.mark.parallel
 @pytest.mark.diffusion
 @pytest.mark.gpu
-@multi_gpu_test(num_gpus=2)
+@pytest.mark.L4
+@multi_gpu_test(num_gpus=4)
 @pytest.mark.parametrize("model_name", models)
 @pytest.mark.parametrize("ulysses_degree", [1, 2])
 @pytest.mark.parametrize("ring_degree", [1, 2])
@@ -213,9 +214,16 @@ def test_sequence_parallel(
     )
 
 
+@pytest.mark.core_model
+@pytest.mark.parallel
+@pytest.mark.diffusion
+@pytest.mark.gpu
+@pytest.mark.L4
+@multi_gpu_test(num_gpus=4)
 @pytest.mark.parametrize("model_name", models)
 @pytest.mark.parametrize("dtype", [torch.bfloat16])
 @pytest.mark.parametrize("attn_backend", ["sdpa"])
+@create_new_process_for_each_test()
 def test_sequence_parallel_ulysses_sp_only(
     model_name: str,
     dtype: torch.dtype,

@@ -28,6 +28,7 @@ class TestCacheDiTBackend:
     """Test CacheDiTBackend implementation."""
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     def test_init_with_dict(self):
@@ -39,6 +40,7 @@ class TestCacheDiTBackend:
         assert backend.enabled is False
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     def test_init_with_config_object(self):
@@ -49,6 +51,7 @@ class TestCacheDiTBackend:
         assert backend.enabled is False
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.cache_dit_backend.cache_dit")
@@ -73,6 +76,7 @@ class TestCacheDiTBackend:
         mock_cache_dit.enable_cache.assert_called_once()
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.cache_dit_backend.cache_dit")
@@ -138,6 +142,7 @@ class TestTeaCacheBackend:
     """Test TeaCacheBackend implementation."""
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     def test_init(self):
@@ -148,6 +153,7 @@ class TestTeaCacheBackend:
         assert backend.enabled is False
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.teacache.backend.apply_teacache_hook")
@@ -169,6 +175,7 @@ class TestTeaCacheBackend:
         mock_apply_hook.assert_called_once()
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.teacache.backend.apply_teacache_hook")
@@ -188,6 +195,7 @@ class TestTeaCacheBackend:
         mock_apply_hook.assert_called_once()
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     @patch("vllm_omni.diffusion.cache.teacache.backend.apply_teacache_hook")
@@ -219,6 +227,7 @@ class TestCacheSelector:
     """Test cache backend selector function."""
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     def test_get_cache_backend_none(self):
@@ -230,6 +239,7 @@ class TestCacheSelector:
         assert backend is None
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     def test_get_cache_backend_cache_dit(self):
@@ -240,6 +250,7 @@ class TestCacheSelector:
         assert backend.config.Fn_compute_blocks == 4
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     def test_get_cache_backend_tea_cache(self):
@@ -250,6 +261,7 @@ class TestCacheSelector:
         assert backend.config.rel_l1_thresh == 0.3
 
     @pytest.mark.core_model
+    @pytest.mark.cache
     @pytest.mark.cpu
     @create_new_process_for_each_test()
     def test_get_cache_backend_invalid(self):

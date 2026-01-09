@@ -8,7 +8,8 @@ from vllm_omni.entrypoints import omni as omni_module
 from vllm_omni.entrypoints.async_omni import AsyncOmni
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.diffusion
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_default_stage_config_includes_cache_backend(monkeypatch):
@@ -41,7 +42,8 @@ def test_default_stage_config_includes_cache_backend(monkeypatch):
     assert ulysses_degree == 2
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.diffusion
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_default_cache_config_used_when_missing(monkeypatch):
@@ -62,7 +64,8 @@ def test_default_cache_config_used_when_missing(monkeypatch):
     assert cache_config["Fn_compute_blocks"] == 1
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.diffusion
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_default_stage_devices_from_sequence_parallel(monkeypatch):

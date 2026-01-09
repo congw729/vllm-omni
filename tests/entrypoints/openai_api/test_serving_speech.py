@@ -9,6 +9,7 @@ import torch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from tests.utils import create_new_process_for_each_test
 from vllm_omni.entrypoints.openai.audio_utils_mixin import AudioMixin
 from vllm_omni.entrypoints.openai.protocol.audio import CreateAudio
 from vllm_omni.entrypoints.openai.serving_speech import OmniOpenAIServingSpeech
@@ -22,8 +23,8 @@ class TestAudioMixin:
     def audio_mixin(self):
         return AudioMixin()
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_stereo_to_mono_conversion(self, audio_mixin):
         stereo_tensor = np.random.rand(24000, 2).astype(np.float32)
         audio_obj = CreateAudio(audio_tensor=stereo_tensor)
@@ -41,8 +42,8 @@ class TestAudioMixin:
             adjusted_tensor = mock_speed.call_args[0][0]
             assert len(adjusted_tensor) == 24000
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     @patch("librosa.effects.time_stretch")
     def test_speed_adjustment(self, mock_time_stretch, audio_mixin):
         mock_time_stretch.return_value = np.zeros(12000)
@@ -53,8 +54,8 @@ class TestAudioMixin:
         mock_time_stretch.assert_called_with(y=audio_tensor, rate=2.0)
         assert adjusted_audio.shape == (12000,)
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     @patch("soundfile.write")
     def test_unsupported_format_fallback(self, mock_write, audio_mixin, caplog):
         audio_tensor = np.random.rand(24000).astype(np.float32)
@@ -68,8 +69,8 @@ class TestAudioMixin:
         write_kwargs = mock_write.call_args.kwargs
         assert write_kwargs["format"] == "WAV"
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_mono_audio_preservation(self, audio_mixin):
         """Test that mono (1D) audio tensors are processed correctly and passed to writer."""
         mono_tensor = np.random.rand(24000).astype(np.float32)
@@ -85,8 +86,8 @@ class TestAudioMixin:
             assert output_tensor.shape == (24000,)
             assert np.array_equal(output_tensor, mono_tensor)
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_stereo_audio_preservation(self, audio_mixin):
         """Test that stereo (2D) audio tensors are processed correctly and preserved."""
         stereo_tensor = np.random.rand(24000, 2).astype(np.float32)
@@ -102,8 +103,8 @@ class TestAudioMixin:
             assert output_tensor.shape == (24000, 2)
             assert np.array_equal(output_tensor, stereo_tensor)
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_speed_adjustment_bypass(self, audio_mixin):
         """Test that speed=1.0 bypasses the expensive librosa time stretching."""
         audio_tensor = np.random.rand(24000).astype(np.float32)
@@ -115,8 +116,8 @@ class TestAudioMixin:
             mock_time_stretch.assert_not_called()
             assert np.array_equal(result, audio_tensor)
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     @patch("librosa.effects.time_stretch")
     def test_speed_adjustment_stereo_handling(self, mock_time_stretch, audio_mixin):
         """Test that speed adjustment is attempted on stereo inputs."""
@@ -222,8 +223,8 @@ def client(test_app):
 
 
 class TestSpeechAPI:
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_create_speech_success(self, client):
         payload = {
             "input": "Hello world",
@@ -236,8 +237,8 @@ class TestSpeechAPI:
         assert response.headers["content-type"] == "audio/wav"
         assert len(response.content) > 0
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_create_speech_mp3_format(self, client):
         payload = {
             "input": "Hello world",
@@ -250,8 +251,8 @@ class TestSpeechAPI:
         assert response.headers["content-type"] == "audio/mpeg"
         assert len(response.content) > 0
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     def test_create_speech_invalid_format(self, client):
         payload = {
             "input": "Hello world",
@@ -262,8 +263,8 @@ class TestSpeechAPI:
         response = client.post("/v1/audio/speech", json=payload)
         assert response.status_code == 422  # Unprocessable Entity
 
-    @pytest.mark.unit
     @pytest.mark.cpu
+    @create_new_process_for_each_test()
     @patch("vllm_omni.entrypoints.openai.serving_speech.OmniOpenAIServingSpeech.create_audio")
     def test_speed_parameter_is_used(self, mock_create_audio, test_app):
         client = TestClient(test_app)

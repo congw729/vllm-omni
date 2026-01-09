@@ -37,8 +37,9 @@ test_params = [(model, stage_config) for model in models]
 @pytest.mark.omni
 @pytest.mark.gpu
 @pytest.mark.npu
+@pytest.mark.rocm
 @pytest.mark.L4
-@multi_gpu_test(num_gpus=2)
+@multi_gpu_test(num_gpus=4)
 @pytest.mark.parametrize("test_config", test_params)
 @create_new_process_for_each_test()
 def test_mixed_modalities_to_audio(omni_runner: type[OmniRunner], test_config: tuple[str, str]) -> None:
@@ -102,8 +103,9 @@ def test_mixed_modalities_to_audio(omni_runner: type[OmniRunner], test_config: t
 @pytest.mark.omni
 @pytest.mark.gpu
 @pytest.mark.npu
+@pytest.mark.rocm
 @pytest.mark.L4
-@multi_gpu_test(num_gpus=2)
+@multi_gpu_test(num_gpus=4)
 @pytest.mark.parametrize("test_config", test_params)
 @create_new_process_for_each_test()
 def test_mixed_modalities_to_text_only(omni_runner: type[OmniRunner], test_config: tuple[str, str]) -> None:

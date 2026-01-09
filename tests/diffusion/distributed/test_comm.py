@@ -7,7 +7,7 @@ import os
 import pytest
 import torch
 
-from tests.utils import create_new_process_for_each_test
+from tests.utils import create_new_process_for_each_test, multi_gpu_test
 from vllm_omni.diffusion.distributed.comm import RingComm, SeqAllToAll4D, SeqAllToAll5D
 from vllm_omni.diffusion.distributed.parallel_state import (
     destroy_distributed_env,
@@ -34,7 +34,9 @@ def update_environment_variables(envs_dict: dict[str, str]):
 
 @pytest.mark.parallel
 @pytest.mark.diffusion
-@pytest.mark.multi_gpu_4
+@pytest.mark.gpu
+@pytest.mark.npu
+@multi_gpu_test(num_gpus=4)
 @pytest.mark.parametrize("world_size", [2, 4])
 @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
 @pytest.mark.parametrize("batch_size", [2])
@@ -169,7 +171,9 @@ def _test_4d_identity_worker(
 
 @pytest.mark.parallel
 @pytest.mark.diffusion
-@pytest.mark.multi_gpu_4
+@pytest.mark.gpu
+@pytest.mark.npu
+@multi_gpu_test(num_gpus=4)
 @pytest.mark.parametrize("world_size", [2, 4])
 @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
 @pytest.mark.parametrize("batch_size", [2])
@@ -307,7 +311,9 @@ def _test_5d_identity_worker(
 
 @pytest.mark.parallel
 @pytest.mark.diffusion
-@pytest.mark.multi_gpu_4
+@pytest.mark.gpu
+@pytest.mark.npu
+@multi_gpu_test(num_gpus=4)
 @pytest.mark.parametrize("world_size", [2, 4])
 @pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
 @pytest.mark.parametrize("batch_size", [2])

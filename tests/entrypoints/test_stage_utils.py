@@ -43,7 +43,7 @@ def _make_dummy_torch(call_log):
     return _Torch
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
 @pytest.mark.cpu
 @pytest.mark.usefixtures("clean_gpu_memory_between_tests")
 @create_new_process_for_each_test()

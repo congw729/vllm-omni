@@ -151,9 +151,10 @@ def ovis_pipeline(mock_dependencies, monkeypatch):
     return pipeline
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
 @pytest.mark.diffusion
-@pytest.mark.cpu
+@pytest.mark.gpu
+@pytest.mark.L4
 @create_new_process_for_each_test()
 def test_interface_compliance(ovis_pipeline):
     """Verify methods required by vllm-omni framework."""
@@ -164,9 +165,10 @@ def test_interface_compliance(ovis_pipeline):
     # assert hasattr(ovis_pipeline, "vae") # Ovis uses VAE
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
 @pytest.mark.diffusion
-@pytest.mark.cpu
+@pytest.mark.gpu
+@pytest.mark.L4
 @create_new_process_for_each_test()
 def test_basic_generation(ovis_pipeline):
     """Test the forward pass logic."""
@@ -191,9 +193,10 @@ def test_basic_generation(ovis_pipeline):
     assert ovis_pipeline.transformer.call_count > 0
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
 @pytest.mark.diffusion
-@pytest.mark.cpu
+@pytest.mark.gpu
+@pytest.mark.L4
 @create_new_process_for_each_test()
 def test_guidance_scale(ovis_pipeline):
     """Test that classifier-free guidance path is taken when scale > 1.0."""
@@ -210,9 +213,10 @@ def test_guidance_scale(ovis_pipeline):
     assert ovis_pipeline.transformer.call_count >= 2
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
 @pytest.mark.diffusion
-@pytest.mark.cpu
+@pytest.mark.gpu
+@pytest.mark.L4
 @create_new_process_for_each_test()
 def test_resolution_check(ovis_pipeline):
     """Test resolution divisible validation logic if present."""
@@ -230,9 +234,10 @@ def test_resolution_check(ovis_pipeline):
     assert output is not None
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
 @pytest.mark.diffusion
-@pytest.mark.cpu
+@pytest.mark.gpu
+@pytest.mark.L4
 @create_new_process_for_each_test()
 def test_real_transformer_init_and_forward():
     """Test the real OvisImageTransformer2DModel initialization and forward pass for coverage."""

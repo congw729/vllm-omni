@@ -6,7 +6,8 @@ import pytest
 from tests.utils import create_new_process_for_each_test
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_resolve_max_mel_frames_default():
@@ -16,7 +17,8 @@ def test_resolve_max_mel_frames_default():
     assert resolve_max_mel_frames(None, default=6000) == 6000
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @create_new_process_for_each_test()
 def test_resolve_max_mel_frames_explicit():
@@ -28,7 +30,8 @@ def test_resolve_max_mel_frames_explicit():
     assert resolve_max_mel_frames(0, default=30000) == 0
 
 
-@pytest.mark.unit
+@pytest.mark.core_model
+@pytest.mark.omni
 @pytest.mark.cpu
 @pytest.mark.parametrize("repeats", [2, 4])
 @pytest.mark.parametrize("code_len", [0, 1, 32768])
