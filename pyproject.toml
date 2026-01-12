@@ -163,9 +163,11 @@ markers = [
     "gpu: Tests that run on GPU",
     "rocm: Tests that run on AMD/ROCm",
     "npu: Tests that run on NPU/Ascend",
-    # specified computation resources marks
+    # specified computation resources marks (auto-added)
     "H100: Tests that require H100 GPU",
     "L4: Tests that require L4 GPU",
+    "A2: Tests that require A2 NPU",
+    "A3: Tests that require A3 NPU",
     "distributed: Tests that require multi cards",
     "skipif: Skip if the num of cards is less than the required",
     # more detailed markers

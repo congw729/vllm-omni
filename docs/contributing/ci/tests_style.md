@@ -139,7 +139,7 @@ vllm_omni/                          tests/
 4. **Documentation**: Add docstrings to all test functions
 5. **Environment variables**: Set uniformly in `conftest.py` or at the top of files
 6. **Type annotations**: Add type annotations to all test function parameters
-7. **Pytest Markers**, Using pytest markers to specify the computation resources the test required.
+7. **Pytest Markers**, Using pytest markers to specify the computation resources the test required. All markers can be found in `vllm-omni/pyproject.toml`.
 
 ### Template
 #### E2E - Online serving
@@ -155,7 +155,7 @@ from pathlib import Path
 import pytest
 import openai
 
-from tests.utils import multi_card_test
+from tests.utils import gpu_test, npu_test
 
 # Optional: set process start method for workers
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
@@ -187,10 +187,8 @@ def dummy_messages_from_video_data(video_data_url: str, content_text: str) -> st
 
 @pytest.mark.core_model
 @pytest.mark.omni
-@pytest.mark.gpu
-@pytest.mark.npu
-@pytest.mark.L4
-@multi_card_test(num_cards=2)
+@gpu_test(res=`L4`, num_cards=2)
+@npu_test(res=`A2`, num_cards=2)
 @pytest.mark.parametrize("omni_server", test_params, indirect=True)
 def test_video_to_audio(
     client: openai.OpenAI,
@@ -233,7 +231,7 @@ from pathlib import Path
 import pytest
 from vllm.assets.video import VideoAsset
 
-from tests.utils import multi_card_test
+from tests.utils import gpu_test, npu_test
 from ..multi_stages.conftest import OmniRunner
 
 # Optional: set process start method for workers
@@ -249,10 +247,8 @@ test_params = [(model, stage_config) for model in models for stage_config in sta
 # modality candidate: text, image, audio, video, mixed_modalities
 @pytest.mark.core_model
 @pytest.mark.omni
-@pytest.mark.gpu
-@pytest.mark.npu
-@pytest.mark.L4
-@multi_card_test(num_cards=2)
+@gpu_test(res=`L4`, num_cards=2)
+@npu_test(res=`A2`, num_cards=2)
 @pytest.mark.parametrize("test_config", test_params)
 def test_video_to_audio(omni_runner: type[OmniRunner], model: str) -> None:
     """Offline inference: video input, audio output."""

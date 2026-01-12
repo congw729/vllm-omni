@@ -16,7 +16,7 @@ import cloudpickle
 import pytest
 from typing_extensions import ParamSpec
 from vllm.platforms import current_platform
-from vllm.utils import cuda_device_count_stateless
+from vllm.utils.torch_utils import cuda_device_count_stateless
 
 _P = ParamSpec("_P")
 
@@ -301,23 +301,72 @@ def create_new_process_for_each_test(
     return spawn_new_process_for_each_test
 
 
-def multi_card_marks(*, num_cards: int):
-    """Get a collection of pytest marks to apply for `@multi_card_test`."""
-    test_selector = pytest.mark.distributed(num_cards=num_cards)
-    # TODO: add NPU support
-    test_skipif = pytest.mark.skipif(
-        cuda_device_count_stateless() < num_cards,
-        reason=f"Need at least {num_cards} GPUs to run the test.",
-    )
+def gpu_marks(*, res: str, num_cards: int):
+    """Get a collection of pytest marks to apply for `@gpu_test`."""
+    test_platform = pytest.mark.gpu
+    if res == "L4":
+        test_resource = pytest.mark.L4
+    elif res == "H100":
+        test_resource = pytest.mark.H100
+    else:
+        raise ValueError(f"Invalid resource type: {res}")
 
-    return [test_selector, test_skipif]
+    if num_cards == 1:
+        return [test_platform, test_resource]
+    else:
+        # Multiple cards scenario needs distributed mark
+        test_selector = pytest.mark.distributed(num_cards=num_cards)
+        test_skipif = pytest.mark.skipif(
+            cuda_device_count_stateless() < num_cards,
+            reason=f"Need at least {num_cards} GPUs to run the test.",
+        )
+        return [test_platform, test_resource, test_skipif, test_selector]
 
 
-def multi_card_test(*, num_cards: int):
+def gpu_test(*, res: str, num_cards: int = 1):
     """
-    Decorate a test to be run only when multiple cards are available.
+    Decorate a test to be run on GPUs with specified resource type.
+    Supports both single-card and multi-card scenarios.
     """
-    marks = multi_card_marks(num_cards=num_cards)
+    marks = gpu_marks(res=res, num_cards=num_cards)
+
+    def wrapper(f: Callable[_P, None]) -> Callable[_P, None]:
+        func = create_new_process_for_each_test()(f)
+        for mark in reversed(marks):
+            func = mark(func)
+
+        return func
+
+    return wrapper
+
+
+def npu_marks(*, res: str, num_cards: int):
+    """Get a collection of pytest marks to apply for `@npu_test`."""
+    test_platform = pytest.mark.npu
+    if res == "A2":
+        test_resource = pytest.mark.A2
+    elif res == "A3":
+        test_resource = pytest.mark.A3
+    else:
+        # TODO: Currently we don't have various NPU card types defined
+        # Use None to skip resource-specific marking for unknown types
+        test_resource = None
+
+    if num_cards == 1:
+        return [mark for mark in [test_platform, test_resource] if mark is not None]
+    else:
+        # Multiple cards scenario needs distributed mark
+        test_selector = pytest.mark.distributed(num_cards=num_cards)
+        # TODO: add NPU support for `skipif` marker
+        return [mark for mark in [test_platform, test_resource, test_selector] if mark is not None]
+
+
+def npu_test(*, res: str, num_cards: int = 1):
+    """
+    Decorate a test to be run on NPUs with specified resource type.
+    Supports both single-card and multi-card scenarios.
+    """
+    marks = npu_marks(res=res, num_cards=num_cards)
 
     def wrapper(f: Callable[_P, None]) -> Callable[_P, None]:
         func = create_new_process_for_each_test()(f)
