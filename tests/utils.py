@@ -301,43 +301,85 @@ def create_new_process_for_each_test(
     return spawn_new_process_for_each_test
 
 
-def gpu_marks(*, res: str, num_cards: int):
-    """Get a collection of pytest marks to apply for `@gpu_test`."""
-    test_platform = pytest.mark.gpu
+def cuda_marks(*, res: str, num_cards: int):
+    """
+    Get a collection of pytest marks to apply for `@cuda_test`.
+
+    Args:
+        res: Resource type, e.g., "L4" or "H100".
+        num_cards: Number of GPU cards required.
+
+    Returns:
+        List of pytest marks to apply.
+    """
+    test_platform_detail = pytest.mark.cuda
+
     if res == "L4":
         test_resource = pytest.mark.L4
     elif res == "H100":
         test_resource = pytest.mark.H100
     else:
-        raise ValueError(f"Invalid resource type: {res}")
+        raise ValueError(f"Invalid CUDA resource type: {res}. Supported: L4, H100")
+
+    marks = [test_resource, test_platform_detail]
 
     if num_cards == 1:
-        return [test_platform, test_resource]
+        return marks
     else:
-        # Multiple cards scenario needs distributed mark
-        test_selector = pytest.mark.distributed(num_cards=num_cards)
-        test_skipif = pytest.mark.skipif(
+        test_distributed = pytest.mark.distributed_cuda(num_cards=num_cards)
+        test_skipif = pytest.mark.skipif_cuda(
             cuda_device_count_stateless() < num_cards,
-            reason=f"Need at least {num_cards} GPUs to run the test.",
+            reason=f"Need at least {num_cards} CUDA GPUs to run the test.",
         )
-        return [test_platform, test_resource, test_skipif, test_selector]
+        return marks + [test_distributed, test_skipif]
 
 
-def gpu_test(*, res: str, num_cards: int = 1):
+def rocm_marks(*, res: str, num_cards: int):
     """
-    Decorate a test to be run on GPUs with specified resource type.
-    Supports both single-card and multi-card scenarios.
+    Get a collection of pytest marks to apply for `@rocm_test`.
+
+    Args:
+        res: Resource type, e.g., "MI325".
+        num_cards: Number of GPU cards required.
+
+    Returns:
+        List of pytest marks to apply.
     """
-    marks = gpu_marks(res=res, num_cards=num_cards)
+    test_platform_detail = pytest.mark.rocm
 
-    def wrapper(f: Callable[_P, None]) -> Callable[_P, None]:
-        func = create_new_process_for_each_test()(f)
-        for mark in reversed(marks):
-            func = mark(func)
+    if res == "MI325":
+        test_resource = pytest.mark.MI325
+    else:
+        raise ValueError(f"Invalid ROCm resource type: {res}. Supported: MI325")
 
-        return func
+    marks = [test_resource, test_platform_detail]
 
-    return wrapper
+    if num_cards == 1:
+        return marks
+    else:
+        test_distributed = pytest.mark.distributed_rocm(num_cards=num_cards)
+        # TODO: add ROCm support for `skipif_rocm` marker
+        return marks + [test_distributed]
+
+
+def gpu_marks(*, res: str, num_cards: int):
+    """
+    Get a collection of pytest marks to apply for `@gpu_test`.
+    Platform is automatically determined based on resource type.
+
+    Args:
+        res: Resource type, e.g., "L4", "H100" for CUDA, or "MI325" for ROCm.
+        num_cards: Number of GPU cards required.
+
+    Returns:
+        List of pytest marks to apply.
+    """
+    test_platform = pytest.mark.gpu
+    if res in ("L4", "H100"):
+        return [test_platform] + cuda_marks(res=res, num_cards=num_cards)
+    if res == "MI325":
+        return [test_platform] + rocm_marks(res=res, num_cards=num_cards)
+    raise ValueError(f"Invalid resource type: {res}. Supported: L4, H100, MI325")
 
 
 def npu_marks(*, res: str, num_cards: int):
@@ -355,24 +397,70 @@ def npu_marks(*, res: str, num_cards: int):
     if num_cards == 1:
         return [mark for mark in [test_platform, test_resource] if mark is not None]
     else:
-        # Multiple cards scenario needs distributed mark
-        test_selector = pytest.mark.distributed(num_cards=num_cards)
-        # TODO: add NPU support for `skipif` marker
-        return [mark for mark in [test_platform, test_resource, test_selector] if mark is not None]
+        # Multiple cards scenario needs distributed_npu mark
+        test_distributed = pytest.mark.distributed_npu(num_cards=num_cards)
+        # TODO: add NPU support for `skipif_npu` marker
+        return [mark for mark in [test_platform, test_resource, test_distributed] if mark is not None]
 
 
-def npu_test(*, res: str, num_cards: int = 1):
+def hardware_test(*, res: dict[str, str], num_cards: int | dict[str, int] = 1):
     """
-    Decorate a test to be run on NPUs with specified resource type.
-    Supports both single-card and multi-card scenarios.
+    Decorate a test for multiple hardware platforms with a single call.
+    Automatically wraps the test with @create_new_process_for_each_test().
+
+    Args:
+        res: Mapping from platform to resource type. Supported platforms/resources:
+            - cuda: L4, H100
+            - rocm: MI325
+            - npu: A2, A3
+        num_cards: Number of cards required. Can be:
+            - int: same card count for all platforms (default: 1)
+            - dict: per-platform card count, e.g., {"cuda": 2, "rocm": 2}
+
+    Example:
+        @hardware_test(
+            res={"cuda": "L4", "rocm": "MI325", "npu": "A2"},
+            num_cards={"cuda": 2, "rocm": 2, "npu": 2},
+        )
+        def test_multi_platform():
+            ...
     """
-    marks = npu_marks(res=res, num_cards=num_cards)
+    # Validate platforms
+    # Don't validate platform details in this decorator
+    for platform, _ in res.items():
+        if platform not in ("cuda", "rocm", "npu"):
+            raise ValueError(f"Unsupported platform: {platform}")
+
+    # Normalize num_cards
+    if isinstance(num_cards, int):
+        num_cards_dict = {platform: num_cards for platform in res.keys()}
+    else:
+        num_cards_dict = num_cards
+        for platform in num_cards_dict.keys():
+            if platform not in res:
+                raise ValueError(
+                    f"Platform '{platform}' in num_cards but not in res. Available platforms: {list(res.keys())}"
+                )
+        for platform in res.keys():
+            if platform not in num_cards_dict:
+                num_cards_dict[platform] = 1
+
+    # Collect marks from all platforms
+    all_marks: list[Callable[[Callable[_P, None]], Callable[_P, None]]] = []
+    for platform, resource in res.items():
+        cards = num_cards_dict[platform]
+        if platform == "cuda" or platform == "rocm":
+            marks = gpu_marks(res=resource, num_cards=cards)
+        elif platform == "npu":
+            marks = npu_marks(res=resource, num_cards=cards)
+        else:
+            raise ValueError(f"Unsupported platform: {platform}")
+        all_marks.extend(marks)
 
     def wrapper(f: Callable[_P, None]) -> Callable[_P, None]:
         func = create_new_process_for_each_test()(f)
-        for mark in reversed(marks):
+        for mark in reversed(all_marks):
             func = mark(func)
-
         return func
 
     return wrapper

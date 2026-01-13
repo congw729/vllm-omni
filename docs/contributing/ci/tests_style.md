@@ -139,7 +139,23 @@ vllm_omni/                          tests/
 4. **Documentation**: Add docstrings to all test functions
 5. **Environment variables**: Set uniformly in `conftest.py` or at the top of files
 6. **Type annotations**: Add type annotations to all test function parameters
-7. **Pytest Markers**, Using pytest markers to specify the computation resources the test required. All markers can be found in `vllm-omni/pyproject.toml`.
+7. **Pytest Markers**: Use `hardware_test` to declare hardware requirements (see `vllm-omni/pyproject.toml` for all markers).
+
+   - Single call for multiple platforms:
+     ```python
+     @hardware_test(
+         res={"cuda": "L4", "rocm": "MI325", "npu": "A2"},
+         num_cards={"cuda": 2, "rocm": 2, "npu": 2},
+     )
+     ```
+   - `res` must be a dict; supported resources: CUDA(L4/H100), ROCm(MI325), NPU(A2/A3)
+   - `num_cards` can be int (all platforms) or dict (per platform); defaults to 1 when missing
+   - `hardware_test` automatically applies `@create_new_process_for_each_test()` once
+   - Distributed markers (`distributed_cuda`, `distributed_rocm`, `distributed_npu`) are auto-added for multi-card cases
+   - Filtering examples:
+     - CUDA only: `pytest -m "distributed_cuda and L4"`
+     - ROCm only: `pytest -m "distributed_rocm and MI325"`
+     - NPU only: `pytest -m "distributed_npu"`
 
 ### Template
 #### E2E - Online serving
@@ -155,7 +171,7 @@ from pathlib import Path
 import pytest
 import openai
 
-from tests.utils import gpu_test, npu_test
+from tests.utils import hardware_test
 
 # Optional: set process start method for workers
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
@@ -187,8 +203,10 @@ def dummy_messages_from_video_data(video_data_url: str, content_text: str) -> st
 
 @pytest.mark.core_model
 @pytest.mark.omni
-@gpu_test(res=`L4`, num_cards=2)
-@npu_test(res=`A2`, num_cards=2)
+@hardware_test(
+    res={"cuda": "L4", "rocm": "MI325", "npu": "A2"},
+    num_cards={"cuda": 2, "rocm": 2, "npu": 2},
+)
 @pytest.mark.parametrize("omni_server", test_params, indirect=True)
 def test_video_to_audio(
     client: openai.OpenAI,
@@ -231,7 +249,7 @@ from pathlib import Path
 import pytest
 from vllm.assets.video import VideoAsset
 
-from tests.utils import gpu_test, npu_test
+from tests.utils import hardware_test
 from ..multi_stages.conftest import OmniRunner
 
 # Optional: set process start method for workers
@@ -247,8 +265,10 @@ test_params = [(model, stage_config) for model in models for stage_config in sta
 # modality candidate: text, image, audio, video, mixed_modalities
 @pytest.mark.core_model
 @pytest.mark.omni
-@gpu_test(res=`L4`, num_cards=2)
-@npu_test(res=`A2`, num_cards=2)
+@hardware_test(
+    res={"cuda": "L4", "rocm": "MI325", "npu": "A2"},
+    num_cards={"cuda": 2, "rocm": 2, "npu": 2},
+)
 @pytest.mark.parametrize("test_config", test_params)
 def test_video_to_audio(omni_runner: type[OmniRunner], model: str) -> None:
     """Offline inference: video input, audio output."""
