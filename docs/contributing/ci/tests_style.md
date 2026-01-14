@@ -139,30 +139,7 @@ vllm_omni/                          tests/
 4. **Documentation**: Add docstrings to all test functions
 5. **Environment variables**: Set uniformly in `conftest.py` or at the top of files
 6. **Type annotations**: Add type annotations to all test function parameters
-7. **Pytest Markers**: Use `hardware_test` to declare hardware requirements (see `vllm-omni/pyproject.toml` for all markers).
-
-   - Single call for multiple platforms:
-     ```python
-     @hardware_test(
-         res={"cuda": "L4", "rocm": "MI325", "npu": "A2"},
-         num_cards={"cuda": 2, "rocm": 2, "npu": 2},
-     )
-     ```
-     or
-    ```python
-     @hardware_test(
-         res={"cuda": "L4", "rocm": "MI325", "npu": "A2"},
-         num_cards=2,
-     )
-     ```
-   - `res` must be a dict; supported resources: CUDA(L4/H100), ROCm(MI325), NPU(A2/A3)
-   - `num_cards` can be int (all platforms) or dict (per platform); defaults to 1 when missing
-   - `hardware_test` automatically applies `@create_new_process_for_each_test()` once
-   - Distributed markers (`distributed_cuda`, `distributed_rocm`, `distributed_npu`) are auto-added for multi-card cases
-   - Filtering examples:
-     - CUDA only: `pytest -m "distributed_cuda and L4"`
-     - ROCm only: `pytest -m "distributed_rocm and MI325"`
-     - NPU only: `pytest -m "distributed_npu"`
+7. **Pytest Markers**: Add necessary markers like `@pytest.mark.core_model` and use `@hardware_test` to declare hardware requirements (check detailed in [Markers for Tests](../tests_markers.md)).
 
 ### Template
 #### E2E - Online serving
@@ -299,4 +276,5 @@ def test_video_to_audio(omni_runner: type[OmniRunner], model: str) -> None:
 
 1. The file is saved in an appropriate place and the file name is clear.
 2. The coding style follows the requirements outlined above.
-3. **All test functions have appropriate pytest markers** For e2e model test, please ensure the test is configured under the `./buildkite/` folder.
+3. **All test functions have appropriate pytest markers**
+4. For tests that need run in CI, please ensure the test is configured under the `./buildkite/` folder.
