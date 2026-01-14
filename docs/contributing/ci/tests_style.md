@@ -148,6 +148,13 @@ vllm_omni/                          tests/
          num_cards={"cuda": 2, "rocm": 2, "npu": 2},
      )
      ```
+     or
+    ```python
+     @hardware_test(
+         res={"cuda": "L4", "rocm": "MI325", "npu": "A2"},
+         num_cards=2,
+     )
+     ```
    - `res` must be a dict; supported resources: CUDA(L4/H100), ROCm(MI325), NPU(A2/A3)
    - `num_cards` can be int (all platforms) or dict (per platform); defaults to 1 when missing
    - `hardware_test` automatically applies `@create_new_process_for_each_test()` once
@@ -205,7 +212,7 @@ def dummy_messages_from_video_data(video_data_url: str, content_text: str) -> st
 @pytest.mark.omni
 @hardware_test(
     res={"cuda": "L4", "rocm": "MI325", "npu": "A2"},
-    num_cards={"cuda": 2, "rocm": 2, "npu": 2},
+    num_cards={"cuda": 2, "rocm": 2, "npu": 4},
 )
 @pytest.mark.parametrize("omni_server", test_params, indirect=True)
 def test_video_to_audio(
@@ -267,7 +274,7 @@ test_params = [(model, stage_config) for model in models for stage_config in sta
 @pytest.mark.omni
 @hardware_test(
     res={"cuda": "L4", "rocm": "MI325", "npu": "A2"},
-    num_cards={"cuda": 2, "rocm": 2, "npu": 2},
+    num_cards=2,
 )
 @pytest.mark.parametrize("test_config", test_params)
 def test_video_to_audio(omni_runner: type[OmniRunner], model: str) -> None:
