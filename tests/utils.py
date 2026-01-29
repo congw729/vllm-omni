@@ -504,7 +504,7 @@ def hardware_test(*, res: dict[str, str], num_cards: int | dict[str, int] = 1):
     def wrapper(f: Callable[_P, None]) -> Callable[_P, None]:
         if create_new_process_flag:
             # only for distributed tests
-            func = create_new_process_for_each_test()(f)
+            func = create_new_process_for_each_test("spawn")(f)
         else:
             func = f
         for mark in reversed(all_marks):
