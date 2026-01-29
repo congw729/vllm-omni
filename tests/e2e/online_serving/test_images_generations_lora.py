@@ -27,6 +27,8 @@ from PIL import Image
 from safetensors.torch import save_file
 from vllm.utils.network_utils import get_open_port
 
+from tests.utils import hardware_test
+
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 
 MODEL = "Tongyi-MAI/Z-Image-Turbo"
@@ -215,6 +217,9 @@ def _basic_payload() -> dict:
     }
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@hardware_test(res={"cuda": "L4", "rocm": "MI325"})
 def test_images_generations_per_request_lora_switching(omni_server: OmniServer, tmp_path: Path) -> None:
     # Base generation.
     base_img = _post_images(omni_server, _basic_payload())

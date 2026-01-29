@@ -21,6 +21,7 @@ import torch
 import torch.distributed as dist
 from PIL import Image
 
+from tests.utils import hardware_test
 from vllm_omni.inputs.data import OmniDiffusionSamplingParams
 
 # ruff: noqa: E402
@@ -134,6 +135,10 @@ def _run_sp(
         _cleanup_distributed()
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@pytest.mark.parallel
+@hardware_test(res={"cuda": "L4", "rocm": "MI325"}, num_cards={"cuda": 4, "rocm": 2})
 @pytest.mark.parametrize("model_name", models)
 @pytest.mark.parametrize("dtype", [torch.bfloat16])
 @pytest.mark.parametrize("attn_backend", ["sdpa"])
@@ -151,6 +156,10 @@ def test_baseline_only(model_name: str, dtype: torch.dtype, attn_backend: str):
     assert images[0].height == height
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@pytest.mark.parallel
+@hardware_test(res={"cuda": "L4", "rocm": "MI325"}, num_cards={"cuda": 4, "rocm": 2})
 @pytest.mark.parametrize("model_name", models)
 @pytest.mark.parametrize("dtype", [torch.bfloat16])
 @pytest.mark.parametrize("attn_backend", ["sdpa"])
@@ -171,6 +180,10 @@ def test_sp_ulysses2_only(model_name: str, dtype: torch.dtype, attn_backend: str
     assert images[0].height == height
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@pytest.mark.parallel
+@hardware_test(res={"cuda": "L4", "rocm": "MI325"}, num_cards={"cuda": 4, "rocm": 2})
 @pytest.mark.parametrize("model_name", models)
 @pytest.mark.parametrize("dtype", [torch.bfloat16])
 @pytest.mark.parametrize("attn_backend", ["sdpa"])
@@ -191,6 +204,10 @@ def test_sp_ring2_only(model_name: str, dtype: torch.dtype, attn_backend: str):
     assert images[0].height == height
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@pytest.mark.parallel
+@hardware_test(res={"cuda": "L4", "rocm": "MI325"}, num_cards={"cuda": 4, "rocm": 2})
 @pytest.mark.parametrize("model_name", models)
 @pytest.mark.parametrize("ulysses_degree", [1, 2])
 @pytest.mark.parametrize("ring_degree", [1, 2])
@@ -234,6 +251,10 @@ def test_sequence_parallel(
     )
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@pytest.mark.parallel
+@hardware_test(res={"cuda": "L4", "rocm": "MI325"}, num_cards={"cuda": 4, "rocm": 2})
 @pytest.mark.parametrize("model_name", models)
 @pytest.mark.parametrize("dtype", [torch.bfloat16])
 @pytest.mark.parametrize("attn_backend", ["sdpa"])

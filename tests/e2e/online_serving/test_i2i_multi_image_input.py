@@ -19,6 +19,8 @@ from PIL import Image
 from vllm.assets.image import ImageAsset
 from vllm.utils.network_utils import get_open_port
 
+from tests.utils import hardware_test
+
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 
 models = ["Qwen/Qwen-Image-Edit-2509"]
@@ -172,6 +174,9 @@ def _decode_data_url_to_image_bytes(data_url: str) -> bytes:
     return base64.b64decode(b64_data)
 
 
+@pytest.mark.core_model
+@pytest.mark.diffusion
+@hardware_test(res={"cuda": "H100", "rocm": "MI325"})
 @pytest.mark.parametrize("omni_server", test_params, indirect=True)
 def test_i2i_multi_image_input_qwen_image_edit_2509(
     client: openai.OpenAI,
