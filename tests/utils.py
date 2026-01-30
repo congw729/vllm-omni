@@ -496,10 +496,10 @@ def hardware_test(*, res: dict[str, str], num_cards: int | dict[str, int] = 1):
         all_marks.extend(marks)
 
     create_new_process_flag = False
-    for cards in num_cards_dict.values():
-        if cards > 1:
-            create_new_process_flag = True
-            break
+    # for cards in num_cards_dict.values():
+    #    if cards > 1:
+    #        create_new_process_flag = True
+    #        break
 
     def wrapper(f: Callable[_P, None]) -> Callable[_P, None]:
         if create_new_process_flag:
