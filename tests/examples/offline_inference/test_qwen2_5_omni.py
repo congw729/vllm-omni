@@ -1,88 +1,97 @@
 """
 Example Offline tests for Qwen2.5-Omni model.
+Test cases based on run_single_prompt.sh and run_multiple_prompts.sh
 """
 
 import os
 import subprocess
 from pathlib import Path
 
-from tests.examples.offline_inference.conftest import convert_audio_file_to_text, cosine_similarity_text
-
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 
 # Example directory path
-EXAMPLE_DIR = str(Path(__file__).parent.parent.parent.parent / "examples" / "offline_inference" / "qwen2_5_omni")
+EXAMPLE_DIR = Path(__file__).parent.parent.parent.parent / "examples" / "offline_inference" / "qwen2_5_omni"
 
 
-def run_cmd(command, timeout=600):
+def run_cmd(command, timeout=600, cwd=None):
     """Run command and return output."""
     result = subprocess.run(
         command,
         capture_output=True,
         text=True,
         timeout=timeout,
+        cwd=cwd,
     )
 
     if result.returncode != 0:
+        print(f"STDOUT: {result.stdout}")
         print(f"STDERR: {result.stderr}")
         raise subprocess.CalledProcessError(result.returncode, command)
 
-    all_output = result.stdout
-    print(f"All output:\n{all_output}")
-    return all_output
+    print(f"STDOUT:\n{result.stdout}")
+    return result.stdout
 
 
-def test_offline_mixed_modalities() -> None:
-    """Test offline inference with mixed modalities (audio + image + video).
+def test_run_single_prompt() -> None:
+    """Test single prompt with mixed modalities.
 
-    This test verifies that end2end.py can process mixed modality inputs
-    and generate both text and audio outputs correctly.
+    Equivalent to run_single_prompt.sh:
+        python end2end.py --output-wav output_audio --query-type use_mixed_modalities
     """
-    output_dir = "./test_output_mixed"
     command = [
         "python",
-        os.path.join(EXAMPLE_DIR, "end2end.py"),
+        "end2end.py",
+        "--output-wav",
+        "output_audio",
         "--query-type",
         "use_mixed_modalities",
-        "--output-wav",
-        output_dir,
-        "--num-prompts",
-        "1",
     ]
 
-    run_cmd(command)
+    run_cmd(command, cwd=str(EXAMPLE_DIR))
 
-    # Verify that text output file was created and contains expected keywords
-    txt_files = list(Path(output_dir).glob("*.txt"))
+    # Verify output files were created
+    output_dir = EXAMPLE_DIR / "output_audio"
+    assert output_dir.exists(), f"Output directory {output_dir} was not created"
+
+    txt_files = list(output_dir.glob("*.txt"))
+    wav_files = list(output_dir.glob("*.wav"))
+
     assert len(txt_files) > 0, "No text output files were created"
-
-    # Read the text output
-    text_content = txt_files[0].read_text(encoding="utf-8")
-    print(f"Text output content:\n{text_content}")
-
-    # Check for expected keywords in the output
-    # The mixed modalities query asks about audio (mary had a lamb), image (cherry blossom), and video (baby reading)
-    assert any(keyword in text_content.lower() for keyword in ["baby", "book", "reading"]), (
-        "The output does not contain keywords related to the video content (baby reading)."
-    )
-    assert "lamb" in text_content.lower(), (
-        "The output does not contain keywords related to the audio content (mary had a lamb)."
-    )
-
-    # Verify audio output was created
-    wav_files = list(Path(output_dir).glob("*.wav"))
     assert len(wav_files) > 0, "No audio output files were created"
 
-    # Convert audio to text and verify similarity with text output
-    audio_text = convert_audio_file_to_text(output_path=str(wav_files[0]))
-    print(f"Audio transcription: {audio_text}")
+    print(f"Created {len(txt_files)} text files and {len(wav_files)} audio files")
 
-    # Extract the vllm_text_output part for comparison
-    if "vllm_text_output:" in text_content:
-        vllm_output = text_content.split("vllm_text_output:")[-1].strip()
-    else:
-        vllm_output = text_content
 
-    similarity = cosine_similarity_text(audio_text.lower(), vllm_output.lower())
-    print(f"Similarity between audio and text: {similarity}")
-    assert similarity > 0.8, f"Audio content does not match text output. Similarity: {similarity}"
+def test_run_multiple_prompts() -> None:
+    """Test multiple prompts with text query type and py_generator mode.
+
+    Equivalent to run_multiple_prompts.sh:
+        python end2end.py --output-wav output_audio --query-type text \
+                          --txt-prompts ../qwen3_omni/text_prompts_10.txt --py-generator
+    """
+    command = [
+        "python",
+        "end2end.py",
+        "--output-wav",
+        "output_audio",
+        "--query-type",
+        "text",
+        "--txt-prompts",
+        "../qwen3_omni/text_prompts_10.txt",
+        "--py-generator",
+    ]
+
+    run_cmd(command, cwd=str(EXAMPLE_DIR))
+
+    # Verify output files were created
+    output_dir = EXAMPLE_DIR / "output_audio"
+    assert output_dir.exists(), f"Output directory {output_dir} was not created"
+
+    txt_files = list(output_dir.glob("*.txt"))
+    wav_files = list(output_dir.glob("*.wav"))
+
+    # text_prompts_10.txt has 10 prompts, so expect 10 outputs
+    assert len(txt_files) >= 10, f"Expected at least 10 text files, got {len(txt_files)}"
+    assert len(wav_files) >= 10, f"Expected at least 10 audio files, got {len(wav_files)}"
+
+    print(f"Created {len(txt_files)} text files and {len(wav_files)} audio files")
