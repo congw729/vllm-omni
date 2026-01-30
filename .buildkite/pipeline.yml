@@ -20,7 +20,7 @@ steps:
   - label: "Simple Unit Test"
     depends_on: image-build
     commands:
-      - pytest -v -s -m "core_model and cpu"
+      - pytest -s -v -m "core_model and cpu"
     agents:
       queue: "gpu_1_queue"
     plugins:
