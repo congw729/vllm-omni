@@ -44,7 +44,7 @@ def test_offline_mixed_modalities() -> None:
         os.path.join(EXAMPLE_DIR, "end2end.py"),
         "--query-type",
         "use_mixed_modalities",
-        "--output-dir",
+        "--output-wav",
         output_dir,
         "--num-prompts",
         "1",
