@@ -237,7 +237,7 @@ steps:
     depends_on: image-build
     commands:
       - export VLLM_WORKER_MULTIPROC_METHOD=spawn
-      - pytest -s -v -m "core_model and omni and not distributed_cuda and H100"
+      - pytest -s -v -m "core_model and diffusion and not distributed_cuda and H100"
     agents:
       queue: "mithril-h100-pool"
     plugins:
