@@ -29,7 +29,7 @@ bash run_single_prompt.sh
 If you want to control output modalities, e.g. only output text, you can run the command below:
 ```bash
 python end2end.py --output-wav output_audio \
-                  --query-type mixed_modalities \
+                  --query-type use_mixed_modalities \
                   --modalities text
 ```
 
@@ -54,12 +54,13 @@ python end2end.py --query-type use_audio_in_video --video-path /path/to/video.mp
 ```
 
 If media file paths are not provided, the script will use default assets. Supported query types:
+- `text`: Text-only query
+- `use_audio`: Audio input only
 - `use_image`: Image input only
 - `use_video`: Video input only
-- `use_audio`: Audio input only
-- `mixed_modalities`: Audio + image + video
+- `use_multi_audios`: Multiple audio inputs
+- `use_mixed_modalities`: Audio + image + video
 - `use_audio_in_video`: Extract audio from video
-- `text`: Text-only query
 
 ### FAQ
 
