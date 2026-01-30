@@ -14,8 +14,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
-from vllm_omni.utils import is_rocm
+from vllm.platforms import current_platform
 
 # --- Constants ---
 
@@ -38,6 +37,11 @@ DEFAULT_TIMEOUT = 600
 
 
 # --- Helper Functions ---
+
+if current_platform.is_rocm():
+    is_rocm = True
+else:
+    is_rocm = False
 
 
 def get_stage_config_path(model_name: str) -> str:
