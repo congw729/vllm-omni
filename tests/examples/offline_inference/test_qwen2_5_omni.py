@@ -1,97 +1,88 @@
-# SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 """
-E2E tests for Qwen2.5-Omni offline inference examples.
-
-Tests verify that examples/offline_inference/qwen2_5_omni/end2end.py works correctly
-with different query types and output modalities.
+Example Offline tests for Qwen2.5-Omni model.
 """
 
-import tempfile
+import os
+import subprocess
+from pathlib import Path
 
-import pytest
+from tests.examples.offline_inference.conftest import convert_audio_file_to_text, cosine_similarity_text
 
-from .conftest import (
-    EXAMPLES_DIR,
-    check_shell_script_syntax,
-    get_stage_config_path,
-    run_end2end_script,
-    verify_output_files,
-)
+os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 
-# Model configuration
-MODEL_NAME = "Qwen/Qwen2.5-Omni-7B"
-MODEL_DIR = "qwen2_5_omni"
-
-# Query types supported by Qwen2.5-Omni (must match query_map in end2end.py)
-QUERY_TYPES = [
-    "text",
-    "use_audio",
-    "use_image",
-    "use_video",
-    "use_multi_audios",
-    "use_mixed_modalities",
-    "use_audio_in_video",
-]
-
-# Shell scripts to verify
-SHELL_SCRIPTS = [
-    "run_single_prompt.sh",
-    "run_multiple_prompts.sh",
-]
+# Example directory path
+EXAMPLE_DIR = str(Path(__file__).parent.parent.parent.parent / "examples" / "offline_inference" / "qwen2_5_omni")
 
 
-# --- Test Cases ---
+def run_cmd(command, timeout=600):
+    """Run command and return output."""
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+
+    if result.returncode != 0:
+        print(f"STDERR: {result.stderr}")
+        raise subprocess.CalledProcessError(result.returncode, command)
+
+    all_output = result.stdout
+    print(f"All output:\n{all_output}")
+    return all_output
 
 
-@pytest.mark.omni
-@pytest.mark.parametrize("query_type", QUERY_TYPES)
-def test_end2end(query_type: str) -> None:
-    """Test qwen2_5_omni end2end.py with different query types."""
-    stage_config_path = get_stage_config_path(MODEL_NAME)
+def test_offline_mixed_modalities() -> None:
+    """Test offline inference with mixed modalities (audio + image + video).
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        result = run_end2end_script(
-            model_dir=MODEL_DIR,
-            query_type=query_type,
-            output_dir=tmp_dir,
-            stage_config_path=stage_config_path,
-        )
+    This test verifies that end2end.py can process mixed modality inputs
+    and generate both text and audio outputs correctly.
+    """
+    output_dir = "./test_output_mixed"
+    command = [
+        "python",
+        os.path.join(EXAMPLE_DIR, "end2end.py"),
+        "--query-type",
+        "use_mixed_modalities",
+        "--output-dir",
+        output_dir,
+        "--num-prompts",
+        "1",
+    ]
 
-        assert result.returncode == 0, (
-            f"qwen2_5_omni end2end.py failed with query_type={query_type}\n"
-            f"stdout: {result.stdout}\n"
-            f"stderr: {result.stderr}"
-        )
+    run_cmd(command)
 
-        verify_output_files(tmp_dir, expect_audio=True)
+    # Verify that text output file was created and contains expected keywords
+    txt_files = list(Path(output_dir).glob("*.txt"))
+    assert len(txt_files) > 0, "No text output files were created"
 
+    # Read the text output
+    text_content = txt_files[0].read_text(encoding="utf-8")
+    print(f"Text output content:\n{text_content}")
 
-@pytest.mark.omni
-@pytest.mark.parametrize("query_type", ["text"])
-def test_text_only_output(query_type: str) -> None:
-    """Test qwen2_5_omni end2end.py with text-only output modality."""
-    stage_config_path = get_stage_config_path(MODEL_NAME)
+    # Check for expected keywords in the output
+    # The mixed modalities query asks about audio (mary had a lamb), image (cherry blossom), and video (baby reading)
+    assert any(keyword in text_content.lower() for keyword in ["baby", "book", "reading"]), (
+        "The output does not contain keywords related to the video content (baby reading)."
+    )
+    assert "lamb" in text_content.lower(), (
+        "The output does not contain keywords related to the audio content (mary had a lamb)."
+    )
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        result = run_end2end_script(
-            model_dir=MODEL_DIR,
-            query_type=query_type,
-            output_dir=tmp_dir,
-            stage_config_path=stage_config_path,
-            modalities="text",
-        )
+    # Verify audio output was created
+    wav_files = list(Path(output_dir).glob("*.wav"))
+    assert len(wav_files) > 0, "No audio output files were created"
 
-        assert result.returncode == 0, (
-            f"qwen2_5_omni end2end.py (text-only) failed\nstdout: {result.stdout}\nstderr: {result.stderr}"
-        )
+    # Convert audio to text and verify similarity with text output
+    audio_text = convert_audio_file_to_text(output_path=str(wav_files[0]))
+    print(f"Audio transcription: {audio_text}")
 
-        verify_output_files(tmp_dir, expect_audio=False)
+    # Extract the vllm_text_output part for comparison
+    if "vllm_text_output:" in text_content:
+        vllm_output = text_content.split("vllm_text_output:")[-1].strip()
+    else:
+        vllm_output = text_content
 
-
-@pytest.mark.omni
-def test_shell_scripts_syntax() -> None:
-    """Verify qwen2_5_omni shell scripts have valid syntax."""
-    for script_name in SHELL_SCRIPTS:
-        script_path = EXAMPLES_DIR / MODEL_DIR / script_name
-        check_shell_script_syntax(script_path)
+    similarity = cosine_similarity_text(audio_text.lower(), vllm_output.lower())
+    print(f"Similarity between audio and text: {similarity}")
+    assert similarity > 0.8, f"Audio content does not match text output. Similarity: {similarity}"

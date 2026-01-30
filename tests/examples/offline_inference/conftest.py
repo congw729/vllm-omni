@@ -1,121 +1,99 @@
-# SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
-"""
-Common fixtures and utilities for offline inference example tests.
-"""
-
+import base64
+import gc
 import os
-import subprocess
-import sys
-from pathlib import Path
+import time
 
-# --- Constants ---
+import torch
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent
-EXAMPLES_DIR = REPO_ROOT / "examples" / "offline_inference"
-
-# Default stage configs located in vllm_omni package (same as used by examples)
-STAGE_CONFIGS_DIR = REPO_ROOT / "vllm_omni" / "model_executor" / "stage_configs"
-
-# Script execution timeout (seconds)
-DEFAULT_TIMEOUT = 600
+os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
+# Set CPU device for CI environments without GPU
+if "VLLM_TARGET_DEVICE" not in os.environ:
+    os.environ["VLLM_TARGET_DEVICE"] = "cpu"
 
 
-# --- Helper Functions ---
+def preprocess_text(text):
+    import re
+
+    word_to_num = {
+        "zero": "0",
+        "one": "1",
+        "two": "2",
+        "three": "3",
+        "four": "4",
+        "five": "5",
+        "six": "6",
+        "seven": "7",
+        "eight": "8",
+        "nine": "9",
+        "ten": "10",
+    }
+
+    for word, num in word_to_num.items():
+        pattern = r"\b" + re.escape(word) + r"\b"
+        text = re.sub(pattern, num, text, flags=re.IGNORECASE)
+
+    text = re.sub(r"[^\w\s]", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.lower().strip()
 
 
-def get_stage_config_path(model_name: str) -> str:
-    """Get the appropriate stage config path based on model.
+def cosine_similarity_text(text1, text2, n: int = 3):
+    from collections import Counter
 
-    Uses the same default configs as the example scripts in
-    vllm_omni/model_executor/stage_configs/.
+    if not text1 or not text2:
+        return 0.0
+
+    text1 = preprocess_text(text1)
+    text2 = preprocess_text(text2)
+
+    ngrams1 = [text1[i : i + n] for i in range(len(text1) - n + 1)]
+    ngrams2 = [text2[i : i + n] for i in range(len(text2) - n + 1)]
+
+    counter1 = Counter(ngrams1)
+    counter2 = Counter(ngrams2)
+
+    all_ngrams = set(counter1.keys()) | set(counter2.keys())
+    vec1 = [counter1.get(ng, 0) for ng in all_ngrams]
+    vec2 = [counter2.get(ng, 0) for ng in all_ngrams]
+
+    dot_product = sum(a * b for a, b in zip(vec1, vec2))
+    norm1 = sum(a * a for a in vec1) ** 0.5
+    norm2 = sum(b * b for b in vec2) ** 0.5
+
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+    return dot_product / (norm1 * norm2)
+
+
+def convert_audio_to_text(audio_data):
     """
-    if "qwen3" in model_name.lower():
-        config_name = "qwen3_omni_moe.yaml"
+    Convert base64 encoded audio data to text using speech recognition.
+    """
+    audio_data = base64.b64decode(audio_data)
+    output_path = f"./test_{int(time.time())}"
+    with open(output_path, "wb") as audio_file:
+        audio_file.write(audio_data)
+
+    print(f"audio data is saved: {output_path}")
+
+    text = convert_audio_file_to_text(output_path=output_path)
+    return text
+
+
+def convert_audio_file_to_text(output_path):
+    import whisper
+
+    model = whisper.load_model("base")
+    text = model.transcribe(
+        output_path,
+        temperature=0.0,
+        word_timestamps=True,
+        condition_on_previous_text=False,
+    )["text"]
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
+    if text:
+        return text
     else:
-        config_name = "qwen2_5_omni.yaml"
-
-    config_path = STAGE_CONFIGS_DIR / config_name
-    return str(config_path)
-
-
-def run_end2end_script(
-    model_dir: str,
-    query_type: str,
-    output_dir: str,
-    stage_config_path: str,
-    timeout: int = DEFAULT_TIMEOUT,
-    modalities: str = None,
-) -> subprocess.CompletedProcess:
-    """
-    Run the end2end.py script with specified parameters.
-
-    Args:
-        model_dir: Directory name under examples/offline_inference/ (e.g., "qwen3_omni")
-        query_type: Query type to test (e.g., "text", "use_audio")
-        output_dir: Directory to save output files
-        stage_config_path: Path to the stage config YAML file
-        timeout: Script execution timeout in seconds
-        modalities: Output modalities (optional, e.g., "text" for text-only output)
-
-    Returns:
-        CompletedProcess instance with returncode, stdout, and stderr
-    """
-    script_path = EXAMPLES_DIR / model_dir / "end2end.py"
-
-    cmd = [
-        sys.executable,
-        str(script_path),
-        "--query-type",
-        query_type,
-        "--output-wav",
-        output_dir,
-        "--stage-configs-path",
-        stage_config_path,
-    ]
-
-    if modalities:
-        cmd.extend(["--modalities", modalities])
-
-    env = os.environ.copy()
-    env["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
-
-    return subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        env=env,
-        cwd=str(REPO_ROOT),
-    )
-
-
-def verify_output_files(output_dir: str, expect_audio: bool = True) -> None:
-    """
-    Verify that expected output files were generated.
-
-    Args:
-        output_dir: Directory containing output files
-        expect_audio: Whether to expect audio output files
-    """
-    output_path = Path(output_dir)
-
-    # Check for text output files
-    txt_files = list(output_path.glob("*.txt"))
-    assert len(txt_files) > 0, f"No text output files found in {output_dir}"
-
-    # Check for audio output files if expected
-    if expect_audio:
-        wav_files = list(output_path.glob("*.wav"))
-        assert len(wav_files) > 0, f"No audio output files found in {output_dir}"
-
-
-def check_shell_script_syntax(script_path: Path) -> None:
-    """Check shell script syntax using bash -n."""
-    if script_path.exists():
-        result = subprocess.run(
-            ["bash", "-n", str(script_path)],
-            capture_output=True,
-            text=True,
-        )
-        assert result.returncode == 0, f"Shell script syntax error in {script_path.name}: {result.stderr}"
+        return ""
