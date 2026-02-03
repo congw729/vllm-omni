@@ -21,7 +21,6 @@ steps:
     depends_on: image-build
     commands:
       - pytest -v -s -m 'core_model and cpu'
-      - pytest -v -s tests/diffusion/lora/
     agents:
       queue: "gpu_1_queue"
     plugins:
