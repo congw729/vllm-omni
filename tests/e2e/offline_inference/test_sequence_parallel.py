@@ -7,9 +7,6 @@ System test for Sequence Parallel (SP) backends: Ulysses and Ring attention.
 Tests verify that SP inference produces correct outputs compared to baseline.
 """
 
-from vllm_omni.platforms import current_omni_platform
-from vllm_omni.diffusion.data import DiffusionParallelConfig
-from vllm_omni import Omni
 import gc
 import os
 import sys
@@ -24,7 +21,10 @@ import torch.distributed as dist
 from PIL import Image
 
 from tests.utils import hardware_test
+from vllm_omni import Omni
+from vllm_omni.diffusion.data import DiffusionParallelConfig
 from vllm_omni.inputs.data import OmniDiffusionSamplingParams
+from vllm_omni.platforms import current_omni_platform
 
 # ruff: noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -68,10 +68,8 @@ def _cleanup_distributed():
 
 def _diff_metrics(a: Image.Image, b: Image.Image) -> tuple[float, float]:
     """Return (mean_abs_diff, max_abs_diff) over RGB pixels in [0, 1]."""
-    ta = torch.from_numpy(np.asarray(
-        a.convert("RGB"), dtype=np.float32) / 255.0)
-    tb = torch.from_numpy(np.asarray(
-        b.convert("RGB"), dtype=np.float32) / 255.0)
+    ta = torch.from_numpy(np.asarray(a.convert("RGB"), dtype=np.float32) / 255.0)
+    tb = torch.from_numpy(np.asarray(b.convert("RGB"), dtype=np.float32) / 255.0)
     assert ta.shape == tb.shape, f"Image shapes differ: {ta.shape} vs {tb.shape}"
     abs_diff = torch.abs(ta - tb)
     return abs_diff.mean().item(), abs_diff.max().item()
@@ -93,8 +91,7 @@ def _run_inference(
     Args:
         warmup: If True, run one warmup iteration before the timed run.
     """
-    parallel_config = DiffusionParallelConfig(
-        ulysses_degree=ulysses_degree, ring_degree=ring_degree)
+    parallel_config = DiffusionParallelConfig(ulysses_degree=ulysses_degree, ring_degree=ring_degree)
     omni = Omni(
         model=model_name,
         parallel_config=parallel_config,
@@ -112,8 +109,7 @@ def _run_inference(
                     width=width,
                     num_inference_steps=DEFAULT_STEPS,
                     guidance_scale=0.0,
-                    generator=torch.Generator(
-                        current_omni_platform.device_type).manual_seed(seed + 1000),
+                    generator=torch.Generator(current_omni_platform.device_type).manual_seed(seed + 1000),
                     num_outputs_per_prompt=1,
                 ),
             )
@@ -127,8 +123,7 @@ def _run_inference(
                 width=width,
                 num_inference_steps=DEFAULT_STEPS,
                 guidance_scale=0.0,
-                generator=torch.Generator(
-                    current_omni_platform.device_type).manual_seed(seed),
+                generator=torch.Generator(current_omni_platform.device_type).manual_seed(seed),
                 num_outputs_per_prompt=1,
             ),
         )
@@ -210,8 +205,7 @@ def test_sp_correctness(model_name: str):
 
         # Get or compute baseline for this (height, width)
         if cache_key not in baseline_cache:
-            print(
-                f"\n--- Running baseline {height}x{width} (warmup={baseline_warmup}) ---")
+            print(f"\n--- Running baseline {height}x{width} (warmup={baseline_warmup}) ---")
             baseline = _run_inference(
                 model_name,
                 torch.bfloat16,
@@ -241,8 +235,7 @@ def test_sp_correctness(model_name: str):
         assert len(sp_result.images) == 1
 
         # Compare outputs (correctness)
-        mean_diff, max_diff = _diff_metrics(
-            baseline.images[0], sp_result.images[0])
+        mean_diff, max_diff = _diff_metrics(baseline.images[0], sp_result.images[0])
 
         # Build result entry
         result = {
@@ -260,8 +253,7 @@ def test_sp_correctness(model_name: str):
 
         # Output based on test type
         if is_perf_test:
-            speedup = baseline.elapsed_ms / \
-                sp_result.elapsed_ms if sp_result.elapsed_ms > 0 else 0
+            speedup = baseline.elapsed_ms / sp_result.elapsed_ms if sp_result.elapsed_ms > 0 else 0
             result["speedup"] = speedup
             print(
                 f"[{sp_mode}] {sp_size} GPUs | "
@@ -269,8 +261,7 @@ def test_sp_correctness(model_name: str):
                 f"speedup: {speedup:.2f}x"
             )
         else:
-            print(
-                f"[{sp_mode}] {sp_size} GPUs | sp: {sp_result.elapsed_ms:.0f}ms (correctness only)")
+            print(f"[{sp_mode}] {sp_size} GPUs | sp: {sp_result.elapsed_ms:.0f}ms (correctness only)")
 
         print(f"[{sp_mode}] diff: mean={mean_diff:.6e}, max={max_diff:.6e}")
 
