@@ -20,7 +20,7 @@ steps:
   - label: "Simple Unit Test"
     depends_on: image-build
     commands:
-      - pytest -v -s -m "core_model and cpu"
+      - pytest -v -s -m 'core_model and cpu'
       - pytest -v -s tests/diffusion/lora/
     agents:
       queue: "gpu_1_queue"
@@ -107,7 +107,7 @@ steps:
     timeout_in_minutes: 15
     depends_on: image-build
     commands:
-      - pytest -s -v -m "core_model and cache and diffusion and not distributed_cuda and L4"
+      - pytest -s -v -m 'core_model and cache and diffusion and not distributed_cuda and L4'
     agents:
       queue: "gpu_1_queue" # g6.4xlarge instance on AWS, has 1 L4 GPU
     plugins:
