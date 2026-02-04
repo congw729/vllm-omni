@@ -12,6 +12,7 @@ Defined in `pyproject.toml`:
 | `omni`             | Omni model tests                                        |
 | `cache`            | Cache backend tests                                     |
 | `parallel`         | Parallelism/distributed tests                           |
+| `benchmark`        | Benchmark tests                                         |
 | `cpu`              | Tests that run on CPU                                   |
 | `gpu`              | Tests that run on GPU (auto-added)                      |
 | `cuda`             | Tests that run on CUDA (auto-added)                     |
