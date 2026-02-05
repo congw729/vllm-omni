@@ -20,7 +20,12 @@ steps:
   - label: "Simple Unit Test"
     depends_on: image-build
     commands:
-      - pytest -v -s -m 'core_model and cpu'
+      - pytest -v -s -m 'core_model and cpu' \
+        --cov=vllm_omni \
+        --cov-branch \
+        --cov-report=term-missing \
+        --cov-report=html \
+        --cov-report=xml
     agents:
       queue: "gpu_1_queue"
     plugins:
