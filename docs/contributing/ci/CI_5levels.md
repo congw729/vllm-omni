@@ -388,6 +388,14 @@ L3 level testing executes after code is merged into the main branch. Its core pu
 -   ****Trigger Timing****: **`**PR Merged**`**. Automatically triggered after code review is approved and merged into the main branch.
 -   ****Execution Environment****: ****GPU**** servers.
 -   ****Script Example****:
+
+<details>
+<summary> Test Examples</summary>
+```python
+# WIP
+```
+</details>
+
 -   -   ****Run Command****: `pytest -s -v /tests/e2e/online_serving/test_{model_name}_expansion.py`
 
 ## Chapter 3: L4 Level Testing - Full Functionality, Performance, and Documentation Testing
@@ -417,6 +425,13 @@ L4 level testing is a comprehensive quality audit before a version release. It e
 -   ****Trigger Timing****: **`**Nightly**`**, automatically executed every night.
 -   ****Execution Environment****: ****GPU**** server clusters to meet the resource demands of performance testing.
 -   ****Script Example****:
+<details>
+<summary> Test Examples</summary>
+```python
+# WIP
+```
+</details>
+
 -   -   ****Run Command****: (Specific commands would depend on the performance testing tool and configuration defined in `nightly.json`).
 
 ## Chapter 4: L5 Level Testing - Stability and Reliability Testing
@@ -442,6 +457,13 @@ L5 level testing focuses on the performance of model services under ****long-run
 -   ****Trigger Timing****: **`**Weekly**`** (weekly) or **`**Days before Release**`** (several days before a major release). Due to long execution times, the frequency is lower.
 -   ****Execution Environment****: ****GPU**** servers, requiring a stable and exclusive testing environment.
 -   ****Script Example****:
+<details>
+<summary> Test Examples</summary>
+```python
+# WIP
+```
+</details>
+
 -   -   ****Stability****: (Execution would be driven by the configuration in `weekly.json`).
     -   ****Reliability****: `pytest -s -v tests/e2e/reliability/test_{model_name}.py`
 
