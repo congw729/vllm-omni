@@ -15,8 +15,9 @@ from unittest.mock import Mock, patch
 import pytest
 import torch
 
-from tests.utils import hardware_test
 from vllm_omni.diffusion.worker.diffusion_worker import DiffusionWorker
+
+pytestmark = [pytest.mark.core_model, pytest.mark.diffusion, pytest.mark.cpu]
 
 
 @pytest.fixture
@@ -45,9 +46,6 @@ def mock_gpu_worker(mock_od_config):
         return worker
 
 
-@pytest.mark.core_model
-@pytest.mark.diffusion
-@hardware_test(res={"cuda": "L4", "rocm": "MI325"}, num_cards={"cuda": 4, "rocm": 2})
 class TestDiffusionWorkerLoadWeights:
     """Test DiffusionWorker.load_weights method."""
 
@@ -80,9 +78,6 @@ class TestDiffusionWorkerLoadWeights:
         assert result == set()
 
 
-@pytest.mark.core_model
-@pytest.mark.diffusion
-@hardware_test(res={"cuda": "L4", "rocm": "MI325"}, num_cards={"cuda": 4, "rocm": 2})
 class TestDiffusionWorkerSleep:
     """Test DiffusionWorker.sleep method."""
 
@@ -171,9 +166,6 @@ class TestDiffusionWorkerSleep:
             mock_gpu_worker.sleep(level=1)
 
 
-@pytest.mark.core_model
-@pytest.mark.diffusion
-@hardware_test(res={"cuda": "L4", "rocm": "MI325"}, num_cards={"cuda": 4, "rocm": 2})
 class TestDiffusionWorkerWakeUp:
     """Test DiffusionWorker.wake_up method."""
 
