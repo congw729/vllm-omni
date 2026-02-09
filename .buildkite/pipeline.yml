@@ -1,7 +1,15 @@
 .base_filter_step: &base_filter_step
   if_changed:
     include: "**"
-    exclude: "docs/**/*.md"
+    exclude:
+      - "docs/**/*.md"
+      - "docs/**/*.png"
+      - "docs/**/*.jpg"
+      - "docs/**/*.yml"
+      - "docs/**/*.yaml"
+      - "docs/**/*.ico"
+      - "docs/**/*.html"
+      - "docs/**/*.css"
 
 steps:
   - label: ":docker: Build image"
