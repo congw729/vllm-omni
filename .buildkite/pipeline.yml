@@ -13,16 +13,19 @@
       - ".buildkite/**/*.yml" # Only for testing, will remove before merging
 
 steps:
-  - label: ":docker: Build image"
+  - label: ":docker: Condition - Check Changes"
     <<: *base_filter_step
-    key: image-build
-    commands:
-      - "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/q9t5s3a7"
-      - "docker build --file docker/Dockerfile.ci -t vllm-omni-ci ."
-      - "docker tag vllm-omni-ci public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:$BUILDKITE_COMMIT"
-      - "docker push public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:$BUILDKITE_COMMIT"
-    agents:
-      queue: "cpu_queue_premerge"
+    condition: true
+    depends_on:
+      - label: ":docker: Build image"
+        key: image-build
+        commands:
+          - "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/q9t5s3a7"
+          - "docker build --file docker/Dockerfile.ci -t vllm-omni-ci ."
+          - "docker tag vllm-omni-ci public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:$BUILDKITE_COMMIT"
+          - "docker push public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:$BUILDKITE_COMMIT"
+        agents:
+          queue: "cpu_queue_premerge"
 
   # - label: "Test on NPU"
   #   depends_on: ~
