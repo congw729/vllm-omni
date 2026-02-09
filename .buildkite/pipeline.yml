@@ -1,5 +1,11 @@
+.base_filter_step: &base_filter_step
+  if_changed:
+    include: "**"
+    exclude: "docs/**/*.md"
+
 steps:
   - label: ":docker: Build image"
+    <<: *base_filter_step
     key: image-build
     commands:
       - "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/q9t5s3a7"
