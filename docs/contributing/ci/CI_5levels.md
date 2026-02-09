@@ -292,7 +292,7 @@ A clear directory structure is key to managing test cases efficiently.
 -   ****Script Example****:
 
 <details>
-<summary> Test Examples</summary>
+<summary> L1 Test Examples</summary>
 
 Examples from `tests/model_executor/models/qwen2_5_omni/test_audio_length.py`
 ```python
@@ -353,10 +353,15 @@ def test_cap_and_align_mel_length_no_mismatch(repeats, code_len, max_mel_frames)
 ```
 </details>
 
+<details>
+<summary> L2 Test Examples</summary>
+You can refer to Test Examples in Chapter 2 to see example test cases that incorporate both L2 and L3 testing logic.
+</details>
+
 -   -   ****Run Command****:
 
     `pytest -s -v /tests/e2e/online_serving/test_{model_name}.py`
-    `pytest -s -v -m 'core_model and cpu'`
+    `pytest -s -v -m 'core_model and cpu' --run-level=core_model`
 
 ## Chapter 2: L3 Level Testing - Core Integration, Performance, and Accuracy Verification
 
@@ -391,12 +396,111 @@ L3 level testing executes after code is merged into the main branch. Its core pu
 
 <details>
 <summary> Test Examples</summary>
+**2.4.1 Mark Declaration Section**
+
 ```python
-# WIP
+@pytest.mark.advanced_model
+@pytest.mark.core_model
+@pytest.mark.parametrize("omni_server", test_params, indirect=True)
 ```
+**Explanation**:
+
+@pytest.mark.advanced_model: Marks the test as L3 or L4 level, indicating that this test case performs deep validation, using real models for performance, integration, and accuracy testing. This forms a "basic-advanced" correspondence with the core_model mark at the L2 level.
+
+@pytest.mark.core_model: Marks the test as L1 or L2 level, indicating that this test case validates the basic functionality of the core model. It uses mock weights and only checks if the relevant interface functions correctly.
+
+@pytest.mark.parametrize: A parameterization decorator that allows abstracting test data into parameters, enabling reuse of the same test logic across different data configurations. indirect=True indicates that parameters will be passed to the fixture for processing.
+
+**Notes**: If you believe the test case only needs to execute basic run logic at the PR-level CI, you can mark it only with @pytest.mark.core_model. If you believe it only needs to execute deep validation run logic at the merge or nightly level, you can mark it only with @pytest.mark.advanced_model. If you believe the test case needs to accommodate both basic run and deep validation test logic, you should mark it with both @pytest.mark.core_model and @pytest.mark.advanced_model.
+
+**2.4.2 Test Function Definition and Documentation**
+
+```python
+def test_mix_to_text_audio_001(omni_server, openai_client) -> None:
+    """
+    Test multi-modal input processing and text/audio output generation via OpenAI API.
+    Deploy Setting: default yaml
+    Input Modal: text + audio + video + image
+    Output Modal: text + audio
+    Input Setting: stream=True
+    Datasets: single request
+    """
+```
+**Explanation**:
+
+**Function Naming Convention**: Uses the test_ prefix, describes the test scenario mix_to_text_audio, and the number 001 indicates the first test case for this scenario.
+
+**Parameter Explanation**:
+
+omni_server: Omni server instance obtained via fixture, containing model information and configuration.
+
+openai_client: Unified OpenAI client processing instance, encapsulating request sending and response validation logic.
+
+Docstring: Describes the test purpose, deployment settings, input/output modalities, streaming settings, and dataset type in detail, providing clear context for test maintenance.
+
+**2.4.3 Multimodal Data Preparation**
+
+```python
+video_data_url = f"data:video/mp4;base64,{generate_synthetic_video(224, 224, 300)['base64']}"
+image_data_url = f"data:image/jpeg;base64,{generate_synthetic_image(224, 224)['base64']}"
+audio_data_url = f"data:audio/wav;base64,{generate_synthetic_audio(5, 1)['base64']}"
+```
+**Explanation**:
+
+**Data Generation Functions**: Use the generate_synthetic_* series of functions to generate synthetic test data, avoiding reliance on external resources and ensuring test reproducibility and stability.
+
+**Parameter Explanation**:
+
+Video: width, height, duration_frames
+
+Image: width, height
+
+Audio: duration_seconds, channels
+
+**2.4.4 Request Configuration and Keyword Validation**
+
+```python
+request_config = {
+    "model": omni_server.model,
+    "messages": messages,
+    "stream": True,
+    "key_words": {
+        "audio": ["water", "cricket"],
+        "video": ["sphere", "globe", "circle", "round"],
+        "image": ["square", "quadrate"],
+        "text": ["beijing"]
+    },
+}
+```
+**Explanation**:
+
+**Model Specification**: Uses omni_server.model to ensure the test aligns with the model configured on the server.
+
+**Keyword Validation Mechanism**: This is an innovative design of the template to address the specific needs of multimodal testing:
+
+Audio Keywords: Validate whether the generated text's description of audio content contains expected elements (e.g., "water" for water sounds, "cricket" for cricket sounds). If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
+
+**Video Keywords: Validate whether the generated text's description of video content contains expected elements. If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
+
+Image Keywords: Validate whether the generated text's description of image content contains expected elements. If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
+
+Text Keywords: Validate whether the generated text contains expected elements. If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
+
+**2.4.5 Request Execution**
+
+```python
+openai_client.send_request(request_config, request_num=1)
+```
+**Explanation**:
+
+**Unified Client**: Uses the OpenAIClientHandler instance to send requests. This client encapsulates error handling, retry mechanisms, and response validation logic.
+
+**Single Request**: The comment clearly states this is a single-request completion test. For concurrent testing, it can be extended to multiple requests using request_num = n.
+
+**Implicit Validation**: The send_request method internally includes validation logic dynamically selected based on the --run-level parameter: core_model performs basic validation, while advanced_model performs deep validation.
 </details>
 
--   -   ****Run Command****: `pytest -s -v /tests/e2e/online_serving/test_{model_name}_expansion.py`
+-   -   ****Run Command****: `pytest -s -v /tests/e2e/online_serving/test_{model_name}.py -m advanced_model --run-level=advanced_model`
 
 ## Chapter 3: L4 Level Testing - Full Functionality, Performance, and Documentation Testing
 
