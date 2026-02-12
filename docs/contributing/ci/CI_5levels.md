@@ -41,7 +41,10 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
       <td>Unit tests for components like entrypoints, models</td>
       <td rowspan="2">&lt;15min</td>
       <td>/tests/{component_name}/test_xxx</td>
-      <td>[Chapter 1](../ci/CI_5levels/#chapter-1-l1-l2-level-testing-unit-testing-and-basic-end-to-end-verification)</td>
+      <td>
+        <a href="#chapter-1-l1-l2-level-testing-unit-testing-and-basic-end-to-end-verification">Chapter 1</a><br>
+        Section 1 L1&amp;L2: Purpose, Test Content, Directory Location, Example
+      </td>
       <td>PR with ready label (also can run locally)</td>
       <td>CPU</td>
     </tr>
@@ -52,7 +55,10 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
         /tests/e2e/online_serving/test_{model_name}.py<br>
         /tests/e2e/offline_inference/test_{model_name}.py
       </td>
-      <td>[Chapter 1](../ci/CI_5levels/#chapter-1-l1-l2-level-testing-unit-testing-and-basic-end-to-end-verification)hapter 1](../ci/CI_5levels/#chapter-1-l1-l2-level-testing-unit-testing-and-basic-end-to-end-verification)<br>Section 1 L1&L2: Purpose, Test Content, Directory Location, Example</td>
+      <td>
+        <a href="#chapter-1-l1-l2-level-testing-unit-testing-and-basic-end-to-end-verification">Chapter 1</a><br>
+        Section 1 L1&amp;L2: Purpose, Test Content, Directory Location, Example
+      </td>
       <td>PR with ready label</td>
       <td>GPU</td>
     </tr>
@@ -64,7 +70,10 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
         /tests/e2e/online_serving/test_{model_name}_expansion.py<br>
         /tests/e2e/offline_inference/test_{model_name}_expansion.py
       </td>
-      <td>[Chapter 2](../ci/CI_5levels/#chapter-2-l3-level-testing-core-integration-performance-and-accuracy-verification)<br>Section 2 L3: Purpose, Test Content, Directory Location, Example</td>
+      <td>
+        <a href="#chapter-2-l3-level-testing-core-integration-performance-and-accuracy-verification">Chapter 2</a><br>
+        Section 2 L3: Purpose, Test Content, Directory Location, Example
+      </td>
       <td>PR Merged (Also run L1&L2 Tests)</td>
       <td>GPU</td>
     </tr>
@@ -82,7 +91,10 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
         tests/example/online_serving/test_{model_name}.py<br>
         tests/example/offline_inference/test_{model_name}.py
       </td>
-      <td>[Chapter 3](../ci/CI_5levels/#chapter-3-l4-level-testing-full-functionality-performance-and-documentation-testing)<br>Section 3 L4: Purpose, Test Content, Directory Location, Example</td>
+      <td>
+        <a href="#chapter-3-l4-level-testing-full-functionality-performance-and-documentation-testing">Chapter 3</a><br>
+        Section 3 L4: Purpose, Test Content, Directory Location, Example
+      </td>
       <td>Nightly</td>
       <td>GPU</td>
     </tr>
@@ -96,7 +108,10 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
         <strong>Reliability:</strong><br>
         tests/e2e/reliability/test_{model_name}.py
       </td>
-      <td>[Chapter 4](../ci/CI_5levels/#chapter-4-l5-level-testing-stability-and-reliability-testing)<br>Section 4 L5: Purpose, Test Content, Directory Location, Example</td>
+      <td>
+        <a href="#chapter-4-l5-level-testing-stability-and-reliability-testing">Chapter 4</a><br>
+        Section 4 L5: Purpose, Test Content, Directory Location, Example
+      </td>
       <td>Weekly / Days before Release</td>
       <td>GPU</td>
     </tr>
