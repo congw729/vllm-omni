@@ -660,7 +660,7 @@ L5 level testing focuses on the performance of model services under ***long-runn
 
 ### 4.4 Execution Method and Example
 
--   ***Trigger Timing***: **`**Weekly**`** (weekly) or **`**Days before Release**`** (several days before a major release). Due to long execution times, the frequency is lower.
+-   ***Trigger Timing***: **`Weekly`** (weekly) or **`Days before Release`** (several days before a major release). Due to long execution times, the frequency is lower.
 -   ***Execution Environment***: ***GPU*** servers, requiring a stable and exclusive testing environment.
 -   ***Script Example***:
 <details>
