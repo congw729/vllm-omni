@@ -65,7 +65,8 @@ steps:
     timeout_in_minutes: 120
     key: nightly-performance
     depends_on: image-build
-    if: build.env("NIGHTLY") == "1"
+    #TODO: Only for testing, will remove before merging to main
+    # if: build.env("NIGHTLY") == "1"
     commands:
       - export VLLM_WORKER_MULTIPROC_METHOD=spawn
       - export BENCHMARK_DIR=tests
@@ -103,7 +104,8 @@ steps:
   - label: "Nightly Perf Collection  & Email"
     key: nightly-perf-distribution
     depends_on: nightly-performance
-    if: build.env("NIGHTLY") == "1"
+    #TODO: Only for testing, will remove before merging to main
+    # if: build.env("NIGHTLY") == "1"
     commands:
       - buildkite-agent artifact download "tests/*.json" . --step nightly-performance
       - python tools/nightly/generate_nightly_perf_excel.py --input-dir tests --output-file ./tests/nightly_perf.xlsx

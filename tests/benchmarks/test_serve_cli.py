@@ -56,6 +56,9 @@ def test_bench_serve_chat(omni_server):
         "/v1/chat/completions",
         "--backend",
         "openai-chat-omni",
+        "--save-result",
+        "--result-dir",
+        "tests",
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     print(result.stdout)
