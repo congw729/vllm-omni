@@ -24,7 +24,7 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
       <td>Contribution Guideline & PR checklist</td>
       <td>/</td>
       <td>/</td>
-      <td>docs/contributing/ci/README.md .github/PULL_REQUEST_TEMPLATE.md docs/contributing/ci/tests_style.md</td>
+      <td>.github/PULL_REQUEST_TEMPLATE.md <a href="../tests_style/"> Test Style (PR Checklist)</a></td>
       <td>/</td>
       <td>/</td>
     </tr>
@@ -32,7 +32,7 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
       <td>CI Failure Description</td>
       <td>/</td>
       <td>/</td>
-      <td>docs/contributing/ci/failures.md</td>
+      <td><a href="../failures/"> CI Failures</a></td>
       <td>/</td>
       <td>/</td>
     </tr>
@@ -57,7 +57,7 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
       </td>
       <td>
         <a href="#chapter-1-l1-l2-level-testing-unit-testing-and-basic-end-to-end-verification">Chapter 1</a><br>
-        Section 1 L1&amp;L2: Purpose, Test Content, Directory Location, Example
+        L1&amp;L2: Purpose, Test Content, Directory Location, Example
       </td>
       <td>PR with ready label</td>
       <td>GPU</td>
@@ -72,7 +72,7 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
       </td>
       <td>
         <a href="#chapter-2-l3-level-testing-core-integration-performance-and-accuracy-verification">Chapter 2</a><br>
-        Section 2 L3: Purpose, Test Content, Directory Location, Example
+        L3: Purpose, Test Content, Directory Location, Example
       </td>
       <td>PR Merged (Also run L1&L2 Tests)</td>
       <td>GPU</td>
@@ -93,7 +93,7 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
       </td>
       <td>
         <a href="#chapter-3-l4-level-testing-full-functionality-performance-and-documentation-testing">Chapter 3</a><br>
-        Section 3 L4: Purpose, Test Content, Directory Location, Example
+        L4: Purpose, Test Content, Directory Location, Example
       </td>
       <td>Nightly</td>
       <td>GPU</td>
@@ -110,7 +110,7 @@ Through five levels (L1-L5) and common (Common) specifications, the system clari
       </td>
       <td>
         <a href="#chapter-4-l5-level-testing-stability-and-reliability-testing">Chapter 4</a><br>
-        Section 4 L5: Purpose, Test Content, Directory Location, Example
+        L5: Purpose, Test Content, Directory Location, Example
       </td>
       <td>Weekly / Days before Release</td>
       <td>GPU</td>
@@ -266,8 +266,8 @@ vllm_omni/                                    tests/
 
 Before entering specific testing levels, the project establishes two common specifications aimed at standardizing the development process and quickly locating issues.
 
-1.  ****PR Checklist (******[Tests Style](../ci/tests_style.md)******)****: This template defines the self-check items that must be completed before submitting a code review (Pull Request). It ensures that each code change meets basic requirements such as code style, dependency updates, and documentation synchronization before entering the automated testing pipeline, serving as the first manual line of defense for quality assurance.
-2.  ****CI Failure Explanation ([CI Failures](../ci/failures.md))****: This document archives and explains common failure patterns in the Continuous Integration (CI) pipeline, error log interpretation, and preliminary troubleshooting steps. It helps developers and testers quickly diagnose the causes of automated test failures, improving problem-solving efficiency.
+1.  ***PR Checklist ([Tests Style](../ci/tests_style.md))***: This template defines the self-check items that must be completed before submitting a code review (Pull Request). It ensures that each code change meets basic requirements such as code style, dependency updates, and documentation synchronization before entering the automated testing pipeline, serving as the first manual line of defense for quality assurance.
+2.  ***CI Failure Explanation ([CI Failures](../ci/failures.md))***: This document archives and explains common failure patterns in the Continuous Integration (CI) pipeline, error log interpretation, and preliminary troubleshooting steps. It helps developers and testers quickly diagnose the causes of automated test failures, improving problem-solving efficiency.
 
 ## Chapter 1: L1 & L2 Level Testing - Unit Testing and Basic End-to-End Verification
 
@@ -281,30 +281,30 @@ L2 level testing builds upon L1 by introducing GPU resources and verifying that 
 
 ### 1.2 Testing Content and Scope
 
--   ****L1 (Unit & Logic Testing)****:
--   -   ****Scope****: Tests internal functions and methods of core components such as `entrypoints`, `models`.
-    -   ****Focus****: Branch coverage, exception handling, algorithm logic correctness. Does not involve external dependencies or the complete service stack.
-    -   ****Time Cost****: Execution time is controlled within ****15 minutes**** to ensure fast feedback.
--   ****L2 (Basic End-to-End Testing)****:
--   -   ****Scope****: Covers two basic deployment scenarios: `online` (serving) and `offline` (inference).
-    -   ****Focus****: Uses `dummy` models or lightweight real models to verify that the entire chain from request input to result output works normally, including output data structure, streaming (stream) support, etc. Also includes some unit tests that require launching independent service instances.
-    -   ****Characteristic****: Requires ****GPU**** resources to perform model computations.
+-   ***L1 (Unit & Logic Testing)***:
+-   -   ***Scope***: Tests internal functions and methods of core components such as `entrypoints`, `models`.
+    -   ***Focus***: Branch coverage, exception handling, algorithm logic correctness. Does not involve external dependencies or the complete service stack.
+    -   ***Time Cost***: Execution time is controlled within ***15 minutes*** to ensure fast feedback.
+-   ***L2 (Basic End-to-End Testing)***:
+-   -   ***Scope***: Covers two basic deployment scenarios: `online` (serving) and `offline` (inference).
+    -   ***Focus***: Uses `dummy` models or lightweight real models to verify that the entire chain from request input to result output works normally, including output data structure, streaming (stream) support, etc. Also includes some unit tests that require launching independent service instances.
+    -   ***Characteristic***: Requires ***GPU*** resources to perform model computations.
 
 ### 1.3 Test Directory and Execution Files
 
 A clear directory structure is key to managing test cases efficiently.
 
--   ****L1 Test Directory****: `/tests/{component_name}/test_xxx.py`
+-   ***L1 Test Directory***: `/tests/{component_name}/test_xxx.py`
 -   -   Here, `{component_name}` corresponds to modules in the source code, such as `distributed`, `entrypoints`, etc., and `test_xxx.py` is the specific test file.
--   ****L2 Test Directory****:
+-   ***L2 Test Directory***:
 -   -   Online Serving: `/tests/e2e/online_serving/test_{model_name}.py`
     -   Offline Inference: `/tests/e2e/offline_inference/test_{model_name}.py`
 
 ### 1.4 Execution Method and Example
 
--   ****Trigger Timing****: **`**PR with ready label**`**. That is, when a developer adds a "ready for review" or similar label to a PR on platforms like GitHub, L1 and L2 tests are automatically triggered.
--   ****Execution Environment****: L1 uses ****CPU**** environment; L2 requires ****GPU**** environment.
--   ****Script Example****:
+-   ***Trigger Timing***: **`PR with ready label`**. That is, when a developer adds a "ready for review" or similar label to a PR on platforms like GitHub, L1 and L2 tests are automatically triggered.
+-   ***Execution Environment***: L1 uses ***CPU*** environment; L2 requires ***GPU*** environment.
+-   ***Script Example***:
 
 <details>
 <summary> L1 Test Examples</summary>
@@ -373,7 +373,7 @@ def test_cap_and_align_mel_length_no_mismatch(repeats, code_len, max_mel_frames)
 You can refer to Test Examples in Chapter 2 to see example test cases that incorporate both L2 and L3 testing logic.
 </details>
 
--   -   ****Run Command****:
+-   -   ***Run Command***:
 
     `pytest -s -v /tests/e2e/online_serving/test_{model_name}.py`
     `pytest -s -v -m 'core_model and cpu' --run-level=core_model`
@@ -382,7 +382,7 @@ You can refer to Test Examples in Chapter 2 to see example test cases that incor
 
 ### 2.1 Testing Purpose
 
-L3 level testing executes after code is merged into the main branch. Its core purpose is to verify the integration effect, key performance indicators, and output accuracy of ****real models**** in ****multiple deployment scenarios****
+L3 level testing executes after code is merged into the main branch. Its core purpose is to verify the integration effect, key performance indicators, and output accuracy of ***real models*** in ***multiple deployment scenarios***
 
 . It acts as the "quality gatekeeper" for the main branch, ensuring that no merge breaks the core capabilities of the model service. Testing needs to provide clear conclusions within a relatively short time (<30min), balancing test depth with feedback speed.
 
@@ -390,160 +390,164 @@ L3 level testing executes after code is merged into the main branch. Its core pu
 
 ### 2.2 Testing Content and Scope
 
--   ****Deployment Scenarios****: Covers richer `online` and `offline` deployment configurations, which may include different hardware configurations, batch sizes, concurrency levels, etc.
--   ****Core Verification****:
--   1.  ****Inference Functionality****: Ensures real models can perform forward computation normally and return results.
-    2.  ****Accuracy Compliance****: Verifies that the model's evaluation metrics (e.g., accuracy) meet the expected baseline, preventing code changes from introducing accuracy issues.
-    3.  ****Important Performance****: Verifies whether performance (e.g., P99 latency, throughput) in core scenarios meets preset thresholds.
+-   ***Deployment Scenarios***: Covers richer `online` and `offline` deployment configurations, which may include different hardware configurations, batch sizes, concurrency levels, etc.
+-   ***Core Verification***:
+-   1.  ***Inference Functionality***: Ensures real models can perform forward computation normally and return results.
+    2.  ***Accuracy Compliance***: Verifies that the model's evaluation metrics (e.g., accuracy) meet the expected baseline, preventing code changes from introducing accuracy issues.
+    3.  ***Important Performance***: Verifies whether performance (e.g., P99 latency, throughput) in core scenarios meets preset thresholds.
 
 ### 2.3 Test Directory and Execution Files
 
--   ****Functional Testing****:
+-   ***Functional Testing***:
 -   -   Online Serving: `/tests/e2e/online_serving/test_{model_name}_expansion.py`
     -   Offline Inference: `/tests/e2e/offline_inference/test_{model_name}_expansion.py`
     -   (Note: `_expansion.py` likely means it contains more comprehensive scenario cases compared to L2 tests).
 
 ### 2.4 Execution Method and Example
 
--   ****Trigger Timing****: **`**PR Merged**`**. Automatically triggered after code review is approved and merged into the main branch.
--   ****Execution Environment****: ****GPU**** servers.
--   ****Script Example****:
+-   ***Trigger Timing***: **`PR Merged`**. Automatically triggered after code review is approved and merged into the main branch.
+-   ***Execution Environment***: ***GPU*** servers.
+-   ***Script Example***:
 
-<details>
-<summary> Test Examples</summary>
-**2.4.1 Mark Declaration Section**
+???+ example "Test Examples"
 
-```python
-@pytest.mark.advanced_model
-@pytest.mark.core_model
-@pytest.mark.parametrize("omni_server", test_params, indirect=True)
-```
-**Explanation**:
+    **2.4.1 Mark Declaration Section**
 
-@pytest.mark.advanced_model: Marks the test as L3 or L4 level, indicating that this test case performs deep validation, using real models for performance, integration, and accuracy testing. This forms a "basic-advanced" correspondence with the core_model mark at the L2 level.
+    ```python
+    @pytest.mark.advanced_model
+    @pytest.mark.core_model
+    @pytest.mark.parametrize("omni_server", test_params, indirect=True)
+    ```
 
-@pytest.mark.core_model: Marks the test as L1 or L2 level, indicating that this test case validates the basic functionality of the core model. It uses mock weights and only checks if the relevant interface functions correctly.
+    **Explanation**:
 
-@pytest.mark.parametrize: A parameterization decorator that allows abstracting test data into parameters, enabling reuse of the same test logic across different data configurations. indirect=True indicates that parameters will be passed to the fixture for processing.
+    @pytest.mark.advanced_model: Marks the test as L3 or L4 level, indicating that this test case performs deep validation, using real models for performance, integration, and accuracy testing. This forms a "basic-advanced" correspondence with the core_model mark at the L2 level.
 
-**Notes**: If you believe the test case only needs to execute basic run logic at the PR-level CI, you can mark it only with @pytest.mark.core_model. If you believe it only needs to execute deep validation run logic at the merge or nightly level, you can mark it only with @pytest.mark.advanced_model. If you believe the test case needs to accommodate both basic run and deep validation test logic, you should mark it with both @pytest.mark.core_model and @pytest.mark.advanced_model.
+    @pytest.mark.core_model: Marks the test as L1 or L2 level, indicating that this test case validates the basic functionality of the core model. It uses mock weights and only checks if the relevant interface functions correctly.
 
-**2.4.2 Test Function Definition and Documentation**
+    @pytest.mark.parametrize: A parameterization decorator that allows abstracting test data into parameters, enabling reuse of the same test logic across different data configurations. indirect=True indicates that parameters will be passed to the fixture for processing.
 
-```python
-def test_mix_to_text_audio_001(omni_server, openai_client) -> None:
-    """
-    Test multi-modal input processing and text/audio output generation via OpenAI API.
-    Deploy Setting: default yaml
-    Input Modal: text + audio + video + image
-    Output Modal: text + audio
-    Input Setting: stream=True
-    Datasets: single request
-    """
-```
-**Explanation**:
+    **Notes**: If you believe the test case only needs to execute basic run logic at the PR-level CI, you can mark it only with @pytest.mark.core_model. If you believe it only needs to execute deep validation run logic at the merge or nightly level, you can mark it only with @pytest.mark.advanced_model. If you believe the test case needs to accommodate both basic run and deep validation test logic, you should mark it with both @pytest.mark.core_model and @pytest.mark.advanced_model.
 
-**Function Naming Convention**: Uses the test_ prefix, describes the test scenario mix_to_text_audio, and the number 001 indicates the first test case for this scenario.
+    **2.4.2 Test Function Definition and Documentation**
 
-**Parameter Explanation**:
+    ```python
+    def test_mix_to_text_audio_001(omni_server, openai_client) -> None:
+        """
+        Test multi-modal input processing and text/audio output generation via OpenAI API.
+        Deploy Setting: default yaml
+        Input Modal: text + audio + video + image
+        Output Modal: text + audio
+        Input Setting: stream=True
+        Datasets: single request
+        """
+    ```
 
-omni_server: Omni server instance obtained via fixture, containing model information and configuration.
+    **Explanation**:
 
-openai_client: Unified OpenAI client processing instance, encapsulating request sending and response validation logic.
+    **Function Naming Convention**: Uses the test_ prefix, describes the test scenario mix_to_text_audio, and the number 001 indicates the first test case for this scenario.
 
-Docstring: Describes the test purpose, deployment settings, input/output modalities, streaming settings, and dataset type in detail, providing clear context for test maintenance.
+    **Parameter Explanation**:
 
-**2.4.3 Multimodal Data Preparation**
+    omni_server: Omni server instance obtained via fixture, containing model information and configuration.
 
-```python
-video_data_url = f"data:video/mp4;base64,{generate_synthetic_video(224, 224, 300)['base64']}"
-image_data_url = f"data:image/jpeg;base64,{generate_synthetic_image(224, 224)['base64']}"
-audio_data_url = f"data:audio/wav;base64,{generate_synthetic_audio(5, 1)['base64']}"
-```
-**Explanation**:
+    openai_client: Unified OpenAI client processing instance, encapsulating request sending and response validation logic.
 
-**Data Generation Functions**: Use the generate_synthetic_* series of functions to generate synthetic test data, avoiding reliance on external resources and ensuring test reproducibility and stability.
+    Docstring: Describes the test purpose, deployment settings, input/output modalities, streaming settings, and dataset type in detail, providing clear context for test maintenance.
 
-**Parameter Explanation**:
+    **2.4.3 Multimodal Data Preparation**
 
-Video: width, height, duration_frames
+    ```python
+    video_data_url = f"data:video/mp4;base64,{generate_synthetic_video(224, 224, 300)['base64']}"
+    image_data_url = f"data:image/jpeg;base64,{generate_synthetic_image(224, 224)['base64']}"
+    audio_data_url = f"data:audio/wav;base64,{generate_synthetic_audio(5, 1)['base64']}"
+    ```
 
-Image: width, height
+    **Explanation**:
 
-Audio: duration_seconds, channels
+    **Data Generation Functions**: Use the generate_synthetic_* series of functions to generate synthetic test data, avoiding reliance on external resources and ensuring test reproducibility and stability.
 
-**2.4.4 Request Configuration and Keyword Validation**
+    **Parameter Explanation**:
 
-```python
-request_config = {
-    "model": omni_server.model,
-    "messages": messages,
-    "stream": True,
-    "key_words": {
-        "audio": ["water", "cricket"],
-        "video": ["sphere", "globe", "circle", "round"],
-        "image": ["square", "quadrate"],
-        "text": ["beijing"]
-    },
-}
-```
-**Explanation**:
+    Video: width, height, duration_frames
 
-**Model Specification**: Uses omni_server.model to ensure the test aligns with the model configured on the server.
+    Image: width, height
 
-**Keyword Validation Mechanism**: This is an innovative design of the template to address the specific needs of multimodal testing:
+    Audio: duration_seconds, channels
 
-Audio Keywords: Validate whether the generated text's description of audio content contains expected elements (e.g., "water" for water sounds, "cricket" for cricket sounds). If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
+    **2.4.4 Request Configuration and Keyword Validation**
 
-**Video Keywords: Validate whether the generated text's description of video content contains expected elements. If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
+    ```python
+    request_config = {
+        "model": omni_server.model,
+        "messages": messages,
+        "stream": True,
+        "key_words": {
+            "audio": ["water", "cricket"],
+            "video": ["sphere", "globe", "circle", "round"],
+            "image": ["square", "quadrate"],
+            "text": ["beijing"]
+        },
+    }
+    ```
 
-Image Keywords: Validate whether the generated text's description of image content contains expected elements. If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
+    **Explanation**:
 
-Text Keywords: Validate whether the generated text contains expected elements. If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
+    **Model Specification**: Uses omni_server.model to ensure the test aligns with the model configured on the server.
 
-**2.4.5 Request Execution**
+    **Keyword Validation Mechanism**: This is an innovative design of the template to address the specific needs of multimodal testing:
 
-```python
-openai_client.send_request(request_config, request_num=1)
-```
-**Explanation**:
+    Audio Keywords: Validate whether the generated text's description of audio content contains expected elements (e.g., "water" for water sounds, "cricket" for cricket sounds). If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
 
-**Unified Client**: Uses the OpenAIClientHandler instance to send requests. This client encapsulates error handling, retry mechanisms, and response validation logic.
+    **Video Keywords**: Validate whether the generated text's description of video content contains expected elements. If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
 
-**Single Request**: The comment clearly states this is a single-request completion test. For concurrent testing, it can be extended to multiple requests using request_num = n.
+    Image Keywords: Validate whether the generated text's description of image content contains expected elements. If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
 
-**Implicit Validation**: The send_request method internally includes validation logic dynamically selected based on the --run-level parameter: core_model performs basic validation, while advanced_model performs deep validation.
-</details>
+    Text Keywords: Validate whether the generated text contains expected elements. If you provide multiple keywords, the validation is considered successful if at least one keyword is present.
 
--   -   ****Run Command****: `pytest -s -v /tests/e2e/online_serving/test_{model_name}.py -m advanced_model --run-level=advanced_model`
+    **2.4.5 Request Execution**
+
+    ```python
+    openai_client.send_request(request_config, request_num=1)
+    ```
+
+    **Explanation**:
+
+    **Unified Client**: Uses the OpenAIClientHandler instance to send requests. This client encapsulates error handling, retry mechanisms, and response validation logic.
+
+    **Single Request**: The comment clearly states this is a single-request completion test. For concurrent testing, it can be extended to multiple requests using request_num = n.
+
+    **Implicit Validation**: The send_request method internally includes validation logic dynamically selected based on the --run-level parameter: core_model performs basic validation, while advanced_model performs deep validation.
+
+-   ***Run Command***: `pytest -s -v /tests/e2e/online_serving/test_{model_name}.py -m advanced_model --run-level=advanced_model`
 
 ## Chapter 3: L4 Level Testing - Full Functionality, Performance, and Documentation Testing
 
 ### 3.1 Testing Purpose
 
-L4 level testing is a comprehensive quality audit before a version release. It expands upon L3, executing ****full**** functional scenarios, conducting systematic ****performance stress tests****, and simultaneously verifying the correctness of accompanying ****example documentation****. Its purpose is to perform deep validation of the system during off-peak nighttime hours, providing quality trend reports for daytime development and data support for release decisions.
+L4 level testing is a comprehensive quality audit before a version release. It expands upon L3, executing ***full*** functional scenarios, conducting systematic ***performance stress tests***, and simultaneously verifying the correctness of accompanying ***example documentation***. Its purpose is to perform deep validation of the system during off-peak nighttime hours, providing quality trend reports for daytime development and data support for release decisions.
 
 
 
 ### 3.2 Testing Content and Scope
 
--   ****Full Functionality Testing****: Executes all test cases defined in `test_{model_name}_expansion.py`, covering all implemented features, positive flows, boundary conditions, and exception handling.
--   ****Performance Testing****: Uses the `/tests/e2e/perf/nightly.json` configuration file to drive performance testing tools for stress, load, and endurance tests, collecting metrics like throughput, response time, and resource utilization.
--   ****Documentation Testing****: Verifies whether the example code provided to users is runnable and its results match the description.
+-   ***Full Functionality Testing***: Executes all test cases defined in `test_{model_name}_expansion.py`, covering all implemented features, positive flows, boundary conditions, and exception handling.
+-   ***Performance Testing***: Uses the `/tests/e2e/perf/nightly.json` configuration file to drive performance testing tools for stress, load, and endurance tests, collecting metrics like throughput, response time, and resource utilization.
+-   ***Documentation Testing***: Verifies whether the example code provided to users is runnable and its results match the description.
 
 ### 3.3 Test Directory and Execution Files
 
--   ****Functional Testing****: Same directories as L3.
--   ****Performance Test Configuration****: `/tests/e2e/perf/nightly.json`
--   ****Documentation Example Tests****:
+-   ***Functional Testing***: Same directories as L3.
+-   ***Performance Test Configuration***: `/tests/e2e/perf/nightly.json`
+-   ***Documentation Example Tests***:
 -   -   `tests/example/online_serving/test_{model_name}.py`
     -   `tests/example/offline_inference/test_{model_name}.py`
 
 ### 3.4 Execution Method and Example
 
--   ****Trigger Timing****: **`**Nightly**`**, automatically executed every night.
--   ****Execution Environment****: ****GPU**** server clusters to meet the resource demands of performance testing.
--   ****Script Example****:
+-   ***Trigger Timing***: **`Nightly`**, automatically executed every night.
+-   ***Execution Environment***: ***GPU*** server clusters to meet the resource demands of performance testing.
+-   ***Script Example***:
 <details>
 <summary> Test Examples</summary>
 When you want to add L4-level performance test cases, you can refer to the following format for case addition in tests/perf/tests/test.json:
@@ -576,7 +580,7 @@ When you want to add L4-level performance test cases, you can refer to the follo
 
 #### Parameter Explanation
 
-****Overview****
+***Overview***
 
 | Field            | Required | Description                                                     |
 | ---------------- | -------- | --------------------------------------------------------------- |
@@ -602,7 +606,7 @@ Supports incremental modifications based on the basic configuration:
 | update    | Update or add configuration items    |
 | delete    | Delete specified configuration items |
 
-****Example****:
+***Example***:
 ```
 "update": {
     "async_chunk": true,  // Enable asynchronous chunk processing
@@ -634,31 +638,31 @@ You can add any benchmark running parameters you need here. For all optional par
 | max_concurrency | int / array | No       | 1, [1, 2, 3]    | Queries per second. Supports single values or arrays. If a single value is used, it will be automatically expanded to match the number of num_prompts, e.g., [1,1,1]. If an array is used, its length must match the number of num_prompts.                          |
 </details>
 
--   -   ****Run Command****: (Specific commands would depend on the performance testing tool and configuration defined in `nightly.json`).
+-   -   ***Run Command***: (Specific commands would depend on the performance testing tool and configuration defined in `nightly.json`).
 
 ## Chapter 4: L5 Level Testing - Stability and Reliability Testing
 
 ### 4.1 Testing Purpose
 
-L5 level testing focuses on the performance of model services under ****long-running**** and ****abnormal fault**** scenarios. It aims to uncover deep-seated issues that only manifest under sustained pressure or extreme conditions, such as memory leaks, resource contention, gradual performance degradation, and lack of fault tolerance mechanisms. This is the final, yet crucial, line of defense for ensuring service high availability and production environment robustness.
+L5 level testing focuses on the performance of model services under ***long-running*** and ***abnormal fault*** scenarios. It aims to uncover deep-seated issues that only manifest under sustained pressure or extreme conditions, such as memory leaks, resource contention, gradual performance degradation, and lack of fault tolerance mechanisms. This is the final, yet crucial, line of defense for ensuring service high availability and production environment robustness.
 
 
 
 ### 4.2 Testing Content and Scope
 
--   ****Long-term Stability (Stability) Testing****: Uses the `tests/e2e/stability/weekly.json` configuration to run the service under moderate load for an extended period (e.g., over 12 hours), monitoring whether metrics like memory/VRAM usage, response time, and throughput degrade over time, and whether the service process remains stable.
--   ****Reliability Testing****: Uses `tests/e2e/reliability/test_{model_name}.py` to actively simulate various fault and abnormal scenarios, such as: dependent service interruption, abnormal input data, network flicker, hardware resource preemption, etc., to verify the system's fault tolerance, self-healing, and graceful degradation capabilities.
+-   ***Long-term Stability (Stability) Testing***: Uses the `tests/e2e/stability/weekly.json` configuration to run the service under moderate load for an extended period (e.g., over 12 hours), monitoring whether metrics like memory/VRAM usage, response time, and throughput degrade over time, and whether the service process remains stable.
+-   ***Reliability Testing***: Uses `tests/e2e/reliability/test_{model_name}.py` to actively simulate various fault and abnormal scenarios, such as: dependent service interruption, abnormal input data, network flicker, hardware resource preemption, etc., to verify the system's fault tolerance, self-healing, and graceful degradation capabilities.
 
 ### 4.3 Test Directory and Execution Files
 
--   ****Stability Test Configuration****: `tests/e2e/stability/weekly.json`
--   ****Reliability Test Suite****: `tests/e2e/reliability/test_{model_name}.py`
+-   ***Stability Test Configuration***: `tests/e2e/stability/weekly.json`
+-   ***Reliability Test Suite***: `tests/e2e/reliability/test_{model_name}.py`
 
 ### 4.4 Execution Method and Example
 
--   ****Trigger Timing****: **`**Weekly**`** (weekly) or **`**Days before Release**`** (several days before a major release). Due to long execution times, the frequency is lower.
--   ****Execution Environment****: ****GPU**** servers, requiring a stable and exclusive testing environment.
--   ****Script Example****:
+-   ***Trigger Timing***: **`**Weekly**`** (weekly) or **`**Days before Release**`** (several days before a major release). Due to long execution times, the frequency is lower.
+-   ***Execution Environment***: ***GPU*** servers, requiring a stable and exclusive testing environment.
+-   ***Script Example***:
 <details>
 <summary> Test Examples</summary>
 ```python
@@ -666,8 +670,8 @@ L5 level testing focuses on the performance of model services under ****long-run
 ```
 </details>
 
--   -   ****Stability****: (Execution would be driven by the configuration in `weekly.json`).
-    -   ****Reliability****: `pytest -s -v tests/e2e/reliability/test_{model_name}.py`
+-   -   ***Stability***: (Execution would be driven by the configuration in `weekly.json`).
+    -   ***Reliability***: `pytest -s -v tests/e2e/reliability/test_{model_name}.py`
 
 ## Summary
 
