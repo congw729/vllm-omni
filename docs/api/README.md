@@ -92,8 +92,10 @@ Configuration classes.
 Worker classes and model runners for distributed inference.
 
 - [vllm_omni.diffusion.worker.diffusion_model_runner.DiffusionModelRunner][]
+- [vllm_omni.diffusion.worker.diffusion_worker.CustomPipelineWorkerExtension][]
 - [vllm_omni.diffusion.worker.diffusion_worker.DiffusionWorker][]
 - [vllm_omni.diffusion.worker.diffusion_worker.WorkerProc][]
+- [vllm_omni.diffusion.worker.diffusion_worker.WorkerWrapperBase][]
 - [vllm_omni.platforms.npu.worker.npu_ar_model_runner.ExecuteModelState][]
 - [vllm_omni.platforms.npu.worker.npu_ar_model_runner.NPUARModelRunner][]
 - [vllm_omni.platforms.npu.worker.npu_ar_worker.NPUARWorker][]
