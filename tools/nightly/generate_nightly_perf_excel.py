@@ -55,6 +55,8 @@ NUMERIC_FORMAT_COLUMNS: tuple[str, ...] = tuple(
 )
 
 _COLUMNS_FILENAME = "nightly_perf_summary_columns.txt"
+DEFAULT_INPUT_DIR = os.getenv("DEFAULT_INPUT_DIR")
+DEFAULT_OUTPUT_DIR = os.getenv("DEFAULT_OUTPUT_DIR")
 
 
 def _load_summary_columns(script_dir: str) -> list[str]:
@@ -111,20 +113,19 @@ def _vllm_omni_root() -> str:
         if os.path.isdir(os.path.join(path, "tests")):
             return path
         path = os.path.dirname(path)
-    # Fallback: script lives at <root>/tools/nightly/
     return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
 
 def _default_input_dir() -> str:
-    """Default: vllm-omni root / tests (where performance JSON files live)."""
+    """Default: vllm-omni root / DEFAULT_INPUT_DIR (where performance JSON files live)."""
     root = _vllm_omni_root()
-    return os.path.join(root, "tests")
+    return os.path.join(root, DEFAULT_INPUT_DIR)
 
 
 def _default_output_file() -> str:
-    """Default: vllm-omni root / nightly_perf_<timestamp>.xlsx."""
+    """Default: vllm-omni root / DEFAULT_OUTPUT_DIR / nightly_perf_<timestamp>.xlsx."""
     ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-    return os.path.join(_vllm_omni_root(), f"nightly_perf_{ts}.xlsx")
+    return os.path.join(_vllm_omni_root(), DEFAULT_OUTPUT_DIR, f"nightly_perf_{ts}.xlsx")
 
 
 def parse_args() -> argparse.Namespace:
@@ -136,13 +137,14 @@ def parse_args() -> argparse.Namespace:
         "--input-dir",
         type=str,
         default=_default_input_dir(),
-        help="Directory containing performance JSON files; default is <vllm-omni-root>/tests.",
+        help="Directory containing performance JSON files; default is <vllm-omni-root>/DEFAULT_INPUT_DIR.",
     )
     parser.add_argument(
         "--output-file",
         type=str,
         default=_default_output_file(),
-        help="Output path of the Excel report; default is <vllm-omni-root>/nightly_perf_<timestamp>.xlsx.",
+        help="Output path of the Excel report; \
+            default is <vllm-omni-root>/DEFAULT_OUTPUT_DIR/nightly_perf_<timestamp>.xlsx.",
     )
     parser.add_argument(
         "--commit-sha",

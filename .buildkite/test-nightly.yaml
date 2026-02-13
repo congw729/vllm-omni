@@ -110,7 +110,7 @@ steps:
       - pip install openpyxl
       - buildkite-agent artifact download "tests/*.json" . --step nightly-performance
       - python tools/nightly/generate_nightly_perf_excel.py --input-dir tests --output-file ./tests/nightly_perf.xlsx
-      - buildkite-agent artifact upload ./tests/nightly_perf.xlsx
+      - buildkite-agent artifact upload ./tests/*.xlsx
       - python tools/nightly/send_nightly_perf_email.py --report-file ./tests/nightly_perf.xlsx --dry-run
     agents:
       queue: "cpu_queue_premerge"

@@ -30,6 +30,8 @@ ENV_EMAIL_SUBJECT_PREFIX = "EMAIL_SUBJECT_PREFIX"
 ENV_BUILD_URL = "BUILDKITE_BUILD_URL"
 ENV_COMMIT = "BUILDKITE_COMMIT"
 
+DEFAULT_OUTPUT_DIR = os.getenv("DEFAULT_OUTPUT_DIR")
+
 # Do not attach Excel if size >= this (bytes); body will suggest downloading from build URL.
 MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 
@@ -54,10 +56,10 @@ def _get_required_env() -> dict[str, str]:
 
 def _get_latest_file(folder_path: str) -> str:
     """Get the latest file from the folder path."""
-    files = [f for f in os.listdir(folder_path) if f.endswith(".xlsx")]
+    files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith(".xlsx")]
     if not files:
         raise SystemExit(f"No Excel files found in {folder_path}")
-    return os.path.join(folder_path, max(files, key=os.path.getctime))
+    return max(files, key=os.path.getctime)
 
 
 def _recipients_list(comma_separated: str) -> list[str]:
@@ -170,6 +172,22 @@ def _date_from_filename(path: str) -> str:
     return base or "unknown"
 
 
+def _vllm_omni_root() -> str:
+    """Resolve vllm-omni repo root: directory that contains a 'tests' subdir (and usually 'tools')."""
+    path = os.path.dirname(os.path.abspath(__file__))
+    while path and path != os.path.dirname(path):
+        if os.path.isdir(os.path.join(path, "tests")):
+            return path
+        path = os.path.dirname(path)
+    return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+
+
+def _default_output_dir() -> str:
+    """Default: vllm-omni root / DEFAULT_OUTPUT_DIR (where performance .xlsx files live)."""
+    root = _vllm_omni_root()
+    return os.path.join(root, DEFAULT_OUTPUT_DIR)
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -178,8 +196,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--report-file",
         type=str,
-        required=True,
-        help="Folder/ file path to the nightly_perf_*.xlsx file.",
+        default=_default_output_dir(),
+        help="Folder/file path to the nightly_perf_*.xlsx file; default is DEFAULT_OUTPUT_DIR.",
     )
     parser.add_argument(
         "--date",
