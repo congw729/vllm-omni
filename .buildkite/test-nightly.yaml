@@ -110,6 +110,11 @@ steps:
       - pip install openpyxl
       - export DEFAULT_INPUT_DIR=tests
       - export DEFAULT_OUTPUT_DIR=tests
+      - export SMTP_HOST=None
+      - export SMTP_PORT=None
+      - export SMTP_USERNAME=None
+      - export SMTP_PASSWORD=None
+      - export DAILY_EMAIL_LIST=None
       - buildkite-agent artifact download "tests/*.json" . --step nightly-performance
       - python tools/nightly/generate_nightly_perf_excel.py
       - python tools/nightly/send_nightly_perf_email.py --dry-run
