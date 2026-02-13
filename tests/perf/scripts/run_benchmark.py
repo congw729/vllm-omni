@@ -1,12 +1,14 @@
-from tests.conftest import OmniServer, modify_stage_config
-import pytest
-from typing import Any
-from pathlib import Path
-from datetime import datetime
-import threading
-import subprocess
 import json
 import os
+import subprocess
+import threading
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from tests.conftest import OmniServer, modify_stage_config
 
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 os.environ["VLLM_TEST_CLEAN_GPU_MEMORY"] = "0"
@@ -48,8 +50,7 @@ def create_unique_server_params(configs: list[dict[str, Any]]) -> list[tuple[str
         test_name = config["test_name"]
         model = config["server_params"]["model"]
         stage_config_name = config["server_params"]["stage_config_name"]
-        stage_config_path = str(
-            Path(__file__).parent.parent / "stage_configs" / stage_config_name)
+        stage_config_path = str(Path(__file__).parent.parent / "stage_configs" / stage_config_name)
         delete = config["server_params"].get("delete", None)
         update = config["server_params"].get("update", None)
         stage_config_path = modify_stage(stage_config_path, update, delete)
@@ -67,8 +68,7 @@ def create_test_parameter_mapping(configs: list[dict[str, Any]]) -> dict[str, di
                 "test_name": test_name,
                 "benchmark_params": [],
             }
-        mapping[test_name]["benchmark_params"].extend(
-            config["benchmark_params"])
+        mapping[test_name]["benchmark_params"].extend(config["benchmark_params"])
     return mapping
 
 
@@ -168,12 +168,10 @@ def benchmark_params(request, omni_server):
     all_params = get_benchmark_params_for_server(test_name)
 
     if not all_params:
-        raise ValueError(
-            f"No benchmark parameters found for test: {test_name}")
+        raise ValueError(f"No benchmark parameters found for test: {test_name}")
 
     if param_index >= len(all_params):
-        raise ValueError(
-            f"No benchmark parameters found for index {param_index} in test: {test_name}")
+        raise ValueError(f"No benchmark parameters found for index {param_index} in test: {test_name}")
 
     return {"test_name": test_name, "params": all_params[param_index]}
 
@@ -222,12 +220,10 @@ def test_performance_benchmark(omni_server, benchmark_params):
             max_concurrency_list = max_concurrency_list * len(num_prompt_list)
         max_len = max(len(qps_list), len(max_concurrency_list))
     elif len(num_prompt_list) != max_len and max_len > 0:
-        raise ValueError(
-            "The number of prompts does not match the QPS or max_concurrency")
+        raise ValueError("The number of prompts does not match the QPS or max_concurrency")
 
     args = ["--host", host, "--port", str(port)]
-    exclude_keys = {"request_rate", "baseline",
-                    "num_prompts", "max_concurrency"}
+    exclude_keys = {"request_rate", "baseline", "num_prompts", "max_concurrency"}
 
     for key, value in params.items():
         if key in exclude_keys or value is None:
@@ -238,16 +234,14 @@ def test_performance_benchmark(omni_server, benchmark_params):
         if isinstance(value, bool) and value:
             args.append(arg_name)
         elif isinstance(value, dict):
-            json_str = json.dumps(
-                value, ensure_ascii=False, separators=(",", ":"))
+            json_str = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
             args.extend([arg_name, json_str])
         elif not isinstance(value, bool):
             args.extend([arg_name, str(value)])
 
     # QPS test
     for qps, num_prompt in zip(qps_list, num_prompt_list):
-        args = args + ["--request-rate",
-                       str(qps), "--num-prompts", str(num_prompt)]
+        args = args + ["--request-rate", str(qps), "--num-prompts", str(num_prompt)]
         result = run_benchmark(
             args=args, test_name=test_name, flow=qps, dataset_name=dataset_name, num_prompt=num_prompt
         )
@@ -255,8 +249,7 @@ def test_performance_benchmark(omni_server, benchmark_params):
 
     # concurrency test
     for concurrency, num_prompt in zip(max_concurrency_list, num_prompt_list):
-        args = args + ["--max-concurrency",
-                       str(concurrency), "--num-prompts", str(num_prompt), "--request-rate", "inf"]
+        args = args + ["--max-concurrency", str(concurrency), "--num-prompts", str(num_prompt), "--request-rate", "inf"]
         result = run_benchmark(
             args=args, test_name=test_name, flow=concurrency, dataset_name=dataset_name, num_prompt=num_prompt
         )
