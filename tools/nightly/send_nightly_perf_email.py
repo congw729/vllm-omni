@@ -52,6 +52,14 @@ def _get_required_env() -> dict[str, str]:
     return {k: str(v).strip() for k, v in required.items()}
 
 
+def _get_latest_file(folder_path: str) -> str:
+    """Get the latest file from the folder path."""
+    files = [f for f in os.listdir(folder_path) if f.endswith(".xlsx")]
+    if not files:
+        raise SystemExit(f"No Excel files found in {folder_path}")
+    return os.path.join(folder_path, max(files, key=os.path.getctime))
+
+
 def _recipients_list(comma_separated: str) -> list[str]:
     """Parse DAILY_EMAIL_LIST into a list of addresses."""
     return [a.strip() for a in comma_separated.split(",") if a.strip()]
@@ -171,7 +179,7 @@ def parse_args() -> argparse.Namespace:
         "--report-file",
         type=str,
         required=True,
-        help="Path to the generated nightly_perf_*.xlsx file.",
+        help="Folder/ file path to the nightly_perf_*.xlsx file.",
     )
     parser.add_argument(
         "--date",
@@ -195,11 +203,13 @@ def main() -> None:
     )
     args = parse_args()
 
-    if not os.path.isfile(args.report_file):
-        raise SystemExit(f"Report file not found: {args.report_file}")
+    # TODO: get latest file from folder path
+    report_file = _get_latest_file(args.report_file) if os.path.isdir(args.report_file) else args.report_file
+    if not os.path.isfile(report_file):
+        raise SystemExit(f"Report file not found: {report_file}")
 
-    date_str = args.date or _date_from_filename(args.report_file)
-    _send_mail(report_file=args.report_file, date_str=date_str, dry_run=args.dry_run)
+    date_str = args.date or _date_from_filename(report_file)
+    _send_mail(report_file=report_file, date_str=date_str, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
