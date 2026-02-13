@@ -110,6 +110,7 @@ steps:
       - pip install openpyxl
       - export DEFAULT_INPUT_DIR=tests
       - export DEFAULT_OUTPUT_DIR=tests
+      #TODO: Remove those secrets before merging to main
       - export SMTP_HOST=None
       - export SMTP_PORT=None
       - export SMTP_USERNAME=None
@@ -118,5 +119,6 @@ steps:
       - buildkite-agent artifact download "tests/*.json" . --step nightly-performance
       - python tools/nightly/generate_nightly_perf_excel.py
       - python tools/nightly/send_nightly_perf_email.py --dry-run
+      - buildkite-agent artifact upload "tests/*.xlsx"
     agents:
       queue: "cpu_queue_premerge"
