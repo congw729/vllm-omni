@@ -1,5 +1,5 @@
 steps:
-  - label: "Omni Model Test with H100"
+  - label: ":full_moon: Omni Model Test with H100"
     timeout_in_minutes: 90
     depends_on: upload-nightly-pipeline
     if: build.env("NIGHTLY") == "1"
@@ -41,7 +41,7 @@ steps:
                   path: /mnt/hf-cache
                   type: DirectoryOrCreate
 
-  - label: "Omni Model Test"
+  - label: ":full_moon: Omni Model Test"
     timeout_in_minutes: 60
     depends_on: upload-nightly-pipeline
     if: build.env("NIGHTLY") == "1"
@@ -62,10 +62,12 @@ steps:
           volumes:
             - "/fsx/hf_cache:/fsx/hf_cache"
 
-  - label: "Omni Model Perf Test"
+  - label: ":full_moon: Omni Model Perf Test with H100"
+    key: nightly-performance
     timeout_in_minutes: 120
     depends_on: upload-nightly-pipeline
-    if: build.env("NIGHTLY") == "1"
+    #TODO: Only for testing, will remove before merging to main
+    # if: build.env("NIGHTLY") == "1"
     commands:
       - export VLLM_WORKER_MULTIPROC_METHOD=spawn
       - export BENCHMARK_DIR=tests
@@ -100,14 +102,24 @@ steps:
                   path: /mnt/hf-cache
                   type: DirectoryOrCreate
 
-  - label: "Nightly Perf Collection  & Email"
+  - label: ":email: Nightly Perf Collection & Email"
     key: nightly-perf-distribution
     depends_on: nightly-performance
-    if: build.env("NIGHTLY") == "1"
+    #TODO: Only for testing, will remove before merging to main
+    # if: build.env("NIGHTLY") == "1"
     commands:
+      - pip install openpyxl
+      - export DEFAULT_INPUT_DIR=tests
+      - export DEFAULT_OUTPUT_DIR=tests
+      #TODO: Remove those secrets before merging to main
+      - export SMTP_HOST=None
+      - export SMTP_PORT=None
+      - export SMTP_USERNAME=None
+      - export SMTP_PASSWORD=None
+      - export DAILY_EMAIL_LIST=None
       - buildkite-agent artifact download "tests/*.json" . --step nightly-performance
-      - python tools/nightly/generate_nightly_perf_excel.py --input-dir tests --output-file ./tests/nightly_perf.xlsx
-      - buildkite-agent artifact upload ./tests/nightly_perf.xlsx
-      - python tools/nightly/send_nightly_perf_email.py --report-file ./tests/nightly_perf.xlsx
+      - python tools/nightly/generate_nightly_perf_excel.py
+      - python tools/nightly/send_nightly_perf_email.py --dry-run
+      - buildkite-agent artifact upload "tests/*.xlsx"
     agents:
       queue: "cpu_queue_premerge"

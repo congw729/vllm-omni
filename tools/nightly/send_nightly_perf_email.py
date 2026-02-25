@@ -30,6 +30,8 @@ ENV_EMAIL_SUBJECT_PREFIX = "EMAIL_SUBJECT_PREFIX"
 ENV_BUILD_URL = "BUILDKITE_BUILD_URL"
 ENV_COMMIT = "BUILDKITE_COMMIT"
 
+DEFAULT_OUTPUT_DIR = os.getenv("DEFAULT_OUTPUT_DIR")
+
 # Do not attach Excel if size >= this (bytes); body will suggest downloading from build URL.
 MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 
@@ -50,6 +52,14 @@ def _get_required_env() -> dict[str, str]:
     if missing:
         raise SystemExit(f"Missing required env vars: {', '.join(missing)}. Set them (e.g. in Buildkite secrets).")
     return {k: str(v).strip() for k, v in required.items()}
+
+
+def _get_latest_file(folder_path: str) -> str:
+    """Get the latest modified file from the folder path."""
+    files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith(".xlsx")]
+    if not files:
+        raise SystemExit(f"No Excel files found in {folder_path}")
+    return max(files, key=os.path.getmtime)
 
 
 def _recipients_list(comma_separated: str) -> list[str]:
@@ -162,6 +172,22 @@ def _date_from_filename(path: str) -> str:
     return base or "unknown"
 
 
+def _vllm_omni_root() -> str:
+    """Resolve vllm-omni repo root: directory that contains a 'tests' subdir (and usually 'tools')."""
+    path = os.path.dirname(os.path.abspath(__file__))
+    while path and path != os.path.dirname(path):
+        if os.path.isdir(os.path.join(path, "tests")):
+            return path
+        path = os.path.dirname(path)
+    return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+
+
+def _default_output_dir() -> str:
+    """Default: vllm-omni root / DEFAULT_OUTPUT_DIR (where performance .xlsx files live)."""
+    root = _vllm_omni_root()
+    return os.path.join(root, DEFAULT_OUTPUT_DIR)
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -170,8 +196,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--report-file",
         type=str,
-        required=True,
-        help="Path to the generated nightly_perf_*.xlsx file.",
+        default=_default_output_dir(),
+        help="Folder/file path to the nightly_perf_*.xlsx file; default is DEFAULT_OUTPUT_DIR.",
     )
     parser.add_argument(
         "--date",
@@ -195,11 +221,12 @@ def main() -> None:
     )
     args = parse_args()
 
-    if not os.path.isfile(args.report_file):
-        raise SystemExit(f"Report file not found: {args.report_file}")
+    report_file = _get_latest_file(args.report_file) if os.path.isdir(args.report_file) else args.report_file
+    if not os.path.isfile(report_file):
+        raise SystemExit(f"Report file not found: {report_file}")
 
-    date_str = args.date or _date_from_filename(args.report_file)
-    _send_mail(report_file=args.report_file, date_str=date_str, dry_run=args.dry_run)
+    date_str = args.date or _date_from_filename(report_file)
+    _send_mail(report_file=report_file, date_str=date_str, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
