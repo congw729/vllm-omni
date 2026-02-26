@@ -71,7 +71,9 @@ steps:
     commands:
       - export VLLM_WORKER_MULTIPROC_METHOD=spawn
       - export BENCHMARK_DIR=tests
-      - pytest -s -v tests/perf/scripts/run_benchmark.py
+      #TODO: change to run_benchmark.py before merging to main
+      # - pytest -s -v tests/perf/scripts/run_benchmark.py
+      - pytest -s -v tests/benchmarks/test_serve_cli.py
       - buildkite-agent artifact upload "tests/*.json"
     agents:
       queue: "mithril-h100-pool"
@@ -119,6 +121,7 @@ steps:
       - export DAILY_EMAIL_LIST=None
       - buildkite-agent artifact download "tests/*.json" . --step nightly-performance
       - python tools/nightly/generate_nightly_perf_excel.py
+      #TODO: Remove dryrun before merging to main
       - python tools/nightly/send_nightly_perf_email.py --dry-run
       - buildkite-agent artifact upload "tests/*.xlsx"
     agents:
