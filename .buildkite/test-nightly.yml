@@ -64,7 +64,7 @@ steps:
 
   - label: ":full_moon: Omni Model Perf Test with H100"
     key: nightly-performance
-    timeout_in_minutes: 120
+    timeout_in_minutes: 180
     depends_on: upload-nightly-pipeline
     #TODO: Only for testing, will remove before merging to main
     # if: build.env("NIGHTLY") == "1"
