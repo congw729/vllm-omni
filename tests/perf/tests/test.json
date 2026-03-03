@@ -9,11 +9,14 @@
             {
                 "dataset_name": "random",
                 "num_prompts": [
-                    10
+                    10,
+                    40,
+                    100
                 ],
                 "max_concurrency": [
                     1,
-                    4
+                    4,
+                    10
                 ],
                 "random_input_len": 2500,
                 "random_output_len": 900,
@@ -29,11 +32,13 @@
                 "dataset_name": "random-mm",
                 "num_prompts": [
                     10,
-                    40
+                    40,
+                    100
                 ],
                 "max_concurrency": [
                     1,
-                    4
+                    4,
+                    10
                 ],
                 "random_input_len": 100,
                 "random_output_len": 100,
@@ -88,11 +93,14 @@
             {
                 "dataset_name": "random",
                 "num_prompts": [
-                    10
+                    10,
+                    40,
+                    100
                 ],
                 "max_concurrency": [
                     1,
-                    4
+                    4,
+                    10
                 ],
                 "random_input_len": 2500,
                 "random_output_len": 900,
@@ -108,11 +116,13 @@
                 "dataset_name": "random-mm",
                 "num_prompts": [
                     10,
-                    40
+                    40,
+                    100
                 ],
                 "max_concurrency": [
                     1,
-                    4
+                    4,
+                    10
                 ],
                 "random_input_len": 100,
                 "random_output_len": 100,
