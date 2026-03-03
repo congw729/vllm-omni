@@ -11,7 +11,7 @@ import json
 import logging
 import os
 from collections.abc import Iterable, Sequence
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from openpyxl import Workbook
@@ -124,7 +124,7 @@ def _default_input_dir() -> str:
 
 def _default_output_file() -> str:
     """Default: vllm-omni root / DEFAULT_OUTPUT_DIR / nightly_perf_<timestamp>.xlsx."""
-    ts = datetime.now(datetime.UTC).strftime("%Y%m%d-%H%M%S")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     return os.path.join(_vllm_omni_root(), DEFAULT_OUTPUT_DIR, f"nightly_perf_{ts}.xlsx")
 
 
@@ -204,7 +204,7 @@ def _iter_json_records(input_dir: str) -> Iterable[dict[str, Any]]:
             continue
 
         record: dict[str, Any] = dict(data)
-        record.setdefault("date", datetime.now(datetime.UTC).strftime("%Y%m%d-%H%M%S"))
+        record.setdefault("date", datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S"))
         record["source_file"] = os.path.basename(full_path)
         yield record
 
