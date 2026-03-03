@@ -138,9 +138,9 @@ def run_benchmark(args: list, test_name: str, flow, dataset_name: str, num_promp
     for line in iter(process.stderr.readline, ""):
         print(line, end=" ")
 
-    if "--result-dir" in args:
-        index = args.index("--result-dir")
-        result_dir = args[index + 1]
+    if "--result-dir" in command:
+        index = command.index("--result-dir")
+        result_dir = command[index + 1]
     else:
         result_dir = "./"
 
