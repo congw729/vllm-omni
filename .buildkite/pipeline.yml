@@ -39,6 +39,7 @@ steps:
     agents:
       queue: "cpu_queue_premerge"
 
+  # Other Framework Test
   - label: ":docker: Build image for other framework"
     key: image-build-other-framework
     commands:
@@ -48,3 +49,12 @@ steps:
       - "docker push public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:${BUILDKITE_COMMIT}-other-framework"
     agents:
       queue: "cpu_queue_premerge"
+
+  - label: "Test Other Framework"
+    depends_on: image-build
+    key: test-other-framework
+    if: build.branch != "main"
+    commands:
+      # sglang command
+    agents:
+      queue: "gpu_1_queue"
