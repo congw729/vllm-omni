@@ -64,4 +64,4 @@ steps:
       --seed=42 --save-output --enable-torch-compile --warmup \
       --dit-cpu-offload false --text-encoder-cpu-offload false --num-gpus=4 --ulysses-degree=4
     agents:
-      queue: "gpu_1_queue"
+      queue: "gpu_4_queue"
