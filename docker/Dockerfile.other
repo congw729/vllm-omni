@@ -1,5 +1,5 @@
 ARG SGLANG_BASE_IMAGE=lmsysorg/sglang
-ARG SGLANG_BASE_TAG=dev-x86
+ARG SGLANG_BASE_TAG=latest
 FROM ${SGLANG_BASE_IMAGE}:${SGLANG_BASE_TAG}
 
 ARG APP_DIR=/workspace/vllm-omni
