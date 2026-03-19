@@ -51,7 +51,7 @@ steps:
       queue: "cpu_queue_premerge"
 
   - label: "Test Other Framework"
-    depends_on: image-build
+    depends_on: image-build-other-framework
     key: test-other-framework
     if: build.branch != "main"
     commands:
