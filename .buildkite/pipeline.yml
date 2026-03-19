@@ -44,7 +44,7 @@ steps:
     commands:
       - "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/q9t5s3a7"
       - "docker build --progress=plain --file docker/Dockerfile.other -t vllm-omni-ci-other ."
-      - "docker tag vllm-omni-ci-other public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:$BUILDKITE_COMMIT"
-      - "docker push public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:$BUILDKITE_COMMIT"
+      - "docker tag vllm-omni-ci-other public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:${BUILDKITE_COMMIT}-other-framework"
+      - "docker push public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:${BUILDKITE_COMMIT}-other-framework"
     agents:
       queue: "cpu_queue_premerge"
