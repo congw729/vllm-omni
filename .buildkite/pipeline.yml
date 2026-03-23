@@ -59,3 +59,13 @@ steps:
       - "sglang generate --model-path=Qwen/Qwen-Image --prompt='A fantasy landscape...' --width=1024 --height=1024 --num-inference-steps=10 --guidance-scale=4.0 --seed=42 --save-output --enable-torch-compile --warmup --dit-cpu-offload false --text-encoder-cpu-offload false --num-gpus=2 --ulysses-degree=2"
     agents:
       queue: "gpu_4_queue"
+    plugins:
+      - docker#v5.2.0:
+          image: public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:${BUILDKITE_COMMIT}-other-framework"
+          always-pull: true
+          propagate-environment: true
+          environment:
+            - "HF_HOME=/fsx/hf_cache"
+            - "HF_TOKEN"
+          volumes:
+            - "/fsx/hf_cache:/fsx/hf_cache"
