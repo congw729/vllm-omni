@@ -61,7 +61,7 @@ steps:
       queue: "gpu_4_queue"
     plugins:
       - docker#v5.2.0:
-          image: public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:${BUILDKITE_COMMIT}-other-framework"
+          image: "public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:${BUILDKITE_COMMIT}-other-framework"
           always-pull: true
           propagate-environment: true
           environment:
