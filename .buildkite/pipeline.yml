@@ -9,9 +9,18 @@ steps:
     agents:
       queue: "cpu_queue_premerge"
 
+  - label : check-skip-ci
+    key: check-skip-ci
+    depends_on: image-build
+    if: (build.branch != "main" && build.pull_request.labels !includes "skip-ci") || build.branch == "main"
+    commands:
+      - buildkite-agent annotate ':memo: CI not skipped — skip-ci label not found' --style "info" || true
+    agents:
+      queue: "cpu_queue_premerge"
+
   # L2 Test
   - label: "Upload Ready Pipeline"
-    depends_on: image-build
+    depends_on: check-skip-ci
     key: upload-ready-pipeline
     if: build.branch != "main" && build.pull_request.labels includes "ready"
     commands:
@@ -21,7 +30,7 @@ steps:
 
   # L3 Test
   - label: "Upload Merge Pipeline"
-    depends_on: image-build
+    depends_on: check-skip-ci
     key: upload-merge-pipeline
     if: build.branch == "main" && build.env("NIGHTLY") != "1"
     commands:
@@ -31,7 +40,7 @@ steps:
 
   # L4 Test — main+NIGHTLY=1 (scheduled), or PR with label nightly-test (e.g. add label then Rebuild)
   - label: "Upload Nightly Pipeline"
-    depends_on: image-build
+    depends_on: check-skip-ci
     key: upload-nightly-pipeline
     if: '(build.branch == "main" && build.env("NIGHTLY") == "1") || (build.branch != "main" && build.pull_request.labels includes "nightly-test")'
     commands:
