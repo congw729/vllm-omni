@@ -124,7 +124,7 @@ def _omni_group_key(record: dict[str, Any]) -> tuple[Any, ...]:
 
 
 def _diffusion_group_key(record: dict[str, Any]) -> tuple[Any, ...]:
-    return (record.get("") or "",)
+    return (record.get("test_name") or "",)
 
 
 def _load_summary_columns(script_dir: str) -> list[str]:
