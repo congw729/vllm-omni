@@ -464,3 +464,16 @@ steps:
       - buildkite-agent artifact upload "tests/dfx/perf/results/*.html"
     agents:
       queue: "cpu_queue_premerge"
+
+  - label: ":chart_with_upwards_trend: Trigger vllm-omni-kanban ingest"
+    key: nightly-kanban-dispatch
+    soft_fail: true # don't block the build if the ingest fails
+    depends_on:
+      - nightly-omni-performance
+      - nightly-qwen-image-performance
+    if: build.env("NIGHTLY") == "1"
+    commands:
+      - chmod +x tools/nightly/trigger_kanban_repository_dispatch.sh
+      - tools/nightly/trigger_kanban_repository_dispatch.sh
+    agents:
+      queue: "cpu_queue_premerge"
