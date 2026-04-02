@@ -1,4 +1,14 @@
 steps:
+  # Keep PR title in sync with label `skip-ci` for squash-merge marker (see image-build `if` / build.message).
+  # Requires GITHUB_TOKEN with permission to update PRs on this repo (Buildkite pipeline secret). Runs on own queue, not GitHub-hosted.
+  - label: ":github: Sync skip-ci PR title"
+    key: sync-skip-ci-pr-title
+    if: build.branch != "main" && build.pull_request.id != null
+    commands:
+      - "bash .buildkite/scripts/sync_skip_ci_pr_title.sh"
+    agents:
+      queue: "cpu_queue_premerge"
+
   - label: ":docker: Build image"
     key: image-build
     # Skip when HEAD build.message matches (e.g. squash subject from PR title); PRs also respect label `skip-ci`.
