@@ -1,0 +1,57 @@
+# When label `skip-ci` is added, append a project-specific marker to the PR title so
+# squash-merge defaults can carry it into build.message on main (see .buildkite/pipeline.yml).
+# Fork PRs: default GITHUB_TOKEN is often read-only for pull_request; title sync may no-op unless permissions/policy allow.
+name: skip-ci - sync PR title marker
+
+on:
+  pull_request:
+    types: [labeled, unlabeled]
+
+concurrency:
+  group: skip-ci-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  sync-title:
+    if: github.event.label.name == 'skip-ci'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Append marker when labeled
+        if: github.event.action == 'labeled'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pr="${{ github.event.pull_request.number }}"
+          repo="${{ github.repository }}"
+          suffix=' [skip vllm-omni ci]'
+          title=$(gh pr view "$pr" --repo "$repo" --json title -q .title)
+          case "$title" in
+            *"${suffix}"*) echo "Title already contains marker; nothing to do."; exit 0 ;;
+          esac
+          gh pr edit "$pr" --repo "$repo" --title "${title}${suffix}"
+
+      # Strip every occurrence of the marker so removing label always clears it (not only as a trailing suffix).
+      - name: Remove marker when unlabeled
+        if: github.event.action == 'unlabeled'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pr="${{ github.event.pull_request.number }}"
+          repo="${{ github.repository }}"
+          marker=' [skip vllm-omni ci]'
+          title=$(gh pr view "$pr" --repo "$repo" --json title -q .title)
+          new_title="${title//"$marker"/}"
+          if [[ "$new_title" == "$title" ]]; then
+            echo "Title has no marker; nothing to do."
+            exit 0
+          fi
+          new_title=$(printf '%s' "$new_title" | tr -s ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          if [[ -z "$new_title" ]]; then
+            echo "Refusing to set empty PR title after marker removal." >&2
+            exit 1
+          fi
+          gh pr edit "$pr" --repo "$repo" --title "$new_title"

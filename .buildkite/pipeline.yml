@@ -1,8 +1,9 @@
 steps:
   - label: ":docker: Build image"
     key: image-build
-    # PR + label `skip-ci`: skip image and entire downstream chain.
-    if: '((build.branch != "main" && !(build.pull_request.labels includes "skip-ci")) || build.branch == "main")'
+    # Skip when HEAD build.message matches (e.g. squash subject from PR title); PRs also respect label `skip-ci`.
+    # Marker is project-specific so it does not collide with common [skip ci] conventions.
+    if: 'build.message !~ /skip vllm-omni ci/i && ((build.branch != "main" && !(build.pull_request.labels includes "skip-ci")) || build.branch == "main")'
     commands:
       - "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/q9t5s3a7"
       - "docker build --progress=plain --file docker/Dockerfile.ci -t vllm-omni-ci ."
@@ -10,7 +11,6 @@ steps:
       - "docker push public.ecr.aws/q9t5s3a7/vllm-ci-test-repo:$BUILDKITE_COMMIT"
     agents:
       queue: "cpu_queue_premerge"
-
 
   # L2 Test
   - label: "Upload Ready Pipeline"
