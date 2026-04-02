@@ -9,12 +9,13 @@ steps:
     agents:
       queue: "cpu_queue_premerge"
 
-  - label : check-skip-ci
+  - label: "check-skip-ci"
     key: check-skip-ci
     depends_on: image-build
-    if: (build.branch != "main" && build.pull_request.labels !includes "skip-ci") || build.branch == "main"
+    # Skipped on PR when label `skip-ci` is set; dependents (pipeline uploads) skip with it.
+    if: '((build.branch != "main" && !(build.pull_request.labels includes "skip-ci")) || build.branch == "main")'
     commands:
-      - buildkite-agent annotate ':memo: CI not skipped — skip-ci label not found' --style "info" || true
+      - "buildkite-agent annotate ':memo: CI not skipped — skip-ci label not found' --style info || true"
     agents:
       queue: "cpu_queue_premerge"
 
