@@ -24,15 +24,6 @@ is_docs_only_change() {
     if [[ "${file_path}" == "mkdocs.yaml" ]]; then
       continue
     fi
-    # TEMP for PR verification:
-    # Treat CI bootstrap self-changes as docs-only so we can validate skip behavior in this PR.
-    # Remove this block after debugging this PR.
-    if [[ "${file_path}" == ".buildkite/pipeline.yml" ]]; then
-      continue
-    fi
-    if [[ "${file_path}" == ".buildkite/scripts/upload_pipeline_with_skip_ci.sh" ]]; then
-      continue
-    fi
     return 1
   done
 
