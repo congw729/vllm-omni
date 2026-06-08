@@ -9,7 +9,6 @@ import os
 import time
 from typing import NamedTuple
 
-import librosa
 import numpy as np
 import soundfile as sf
 import vllm
@@ -19,9 +18,10 @@ from vllm.assets.audio import AudioAsset
 from vllm.assets.image import ImageAsset
 from vllm.assets.video import VideoAsset, video_to_ndarrays
 from vllm.multimodal.image import convert_image_mode
-from vllm.utils.argparse_utils import FlexibleArgumentParser
+from vllm.multimodal.media.audio import load_audio
 
 from vllm_omni.entrypoints.omni import Omni
+from vllm_omni.utils.tracking_parser import TrackingArgumentParser
 
 SEED = 42
 
@@ -129,7 +129,7 @@ def get_audio_query(question: str = None, audio_path: str | None = None, samplin
     if audio_path:
         if not os.path.exists(audio_path):
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
-        audio_signal, sr = librosa.load(audio_path, sr=sampling_rate)
+        audio_signal, sr = load_audio(audio_path, sr=sampling_rate)
         audio_data = (audio_signal.astype(np.float32), sr)
     else:
         audio_data = AudioAsset("mary_had_lamb").audio_and_sample_rate
@@ -183,7 +183,7 @@ def get_mixed_modalities_query(
     if audio_path:
         if not os.path.exists(audio_path):
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
-        audio_signal, sr = librosa.load(audio_path, sr=sampling_rate)
+        audio_signal, sr = load_audio(audio_path, sr=sampling_rate)
         audio_data = (audio_signal.astype(np.float32), sr)
     else:
         audio_data = AudioAsset("mary_had_lamb").audio_and_sample_rate
@@ -294,14 +294,10 @@ def main(args):
     else:
         query_result = query_func()
 
-    omni = Omni(
-        model=model_name,
-        stage_configs_path=args.stage_configs_path,
-        log_stats=args.log_stats,
-        stage_init_timeout=args.stage_init_timeout,
-        init_timeout=args.init_timeout,
-        enable_diffusion_pipeline_profiler=args.enable_diffusion_pipeline_profiler,
-    )
+    omni_kwargs = vars(args).copy()
+    # Override CLI --model with the derived model_name.
+    omni_kwargs["model"] = model_name
+    omni = Omni(**omni_kwargs)
 
     thinker_sampling_params = SamplingParams(
         temperature=0.9,
@@ -395,6 +391,13 @@ def main(args):
             output_wav = os.path.join(output_dir, f"output_{request_id}.wav")
 
             # Convert to numpy array and ensure correct format
+            # In async_chunk mode, audio may arrive as a list of chunks
+            if isinstance(audio_tensor, list):
+                import torch
+
+                audio_tensor = torch.cat(
+                    [(t if isinstance(t, torch.Tensor) else torch.tensor(t)).flatten() for t in audio_tensor]
+                )
             audio_numpy = audio_tensor.float().detach().cpu().numpy()
 
             # Ensure audio is 1D (flatten if needed)
@@ -418,7 +421,7 @@ def main(args):
 
 
 def parse_args():
-    parser = FlexibleArgumentParser(description="Demo on using vLLM for offline inference with audio language models")
+    parser = TrackingArgumentParser(description="Demo on using vLLM for offline inference with audio language models")
     parser.add_argument(
         "--model",
         type=str,
@@ -538,11 +541,6 @@ def parse_args():
         help="Use py_generator mode. The returned type of Omni.generate() is a Python Generator object.",
     )
     parser.add_argument(
-        "--enable-diffusion-pipeline-profiler",
-        action="store_true",
-        help="Enable diffusion pipeline profiler to display stage durations.",
-    )
-    parser.add_argument(
         "--enable-profiler",
         action="store_true",
         default=False,
@@ -554,6 +552,12 @@ def parse_args():
         nargs="*",
         default=None,
         help="List of stage IDs to profile. If not set, profiles all stages.",
+    )
+    parser.add_argument(
+        "--dtype",
+        type=str,
+        default="auto",
+        help="Model dtype (auto, half, float16, bfloat16, float, float32).",
     )
 
     return parser.parse_args()

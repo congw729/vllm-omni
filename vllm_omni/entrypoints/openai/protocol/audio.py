@@ -1,14 +1,21 @@
-from typing import Literal
+import math
+from typing import Any, Literal
 
 import numpy as np
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
+
+_MAX_EMBEDDING_DIM = 8192
 
 
 class OpenAICreateSpeechRequest(BaseModel):
     input: str
     model: str | None = None
+    # Accept both "voice" (OpenAI convention) and "speaker" (model/internal
+    # convention) as input keys.  Intentionally global — all TTS backends
+    # (Qwen3-TTS, Voxtral, Fish Speech) use this field for the speaker name.
     voice: str | None = Field(
         default=None,
+        validation_alias=AliasChoices("voice", "speaker"),
         description="Speaker/voice to use. For Qwen3-TTS: vivian, ryan, aiden, etc.",
     )
     instructions: str | None = Field(
@@ -41,24 +48,57 @@ class OpenAICreateSpeechRequest(BaseModel):
     )
     ref_audio: str | None = Field(
         default=None,
-        description="Reference audio for voice cloning (Base task). URL, base64, or file path.",
+        description="Reference audio for voice cloning (Base task). URL, base64, or file URI.",
     )
     ref_text: str | None = Field(
         default=None,
         description="Transcript of reference audio for voice cloning (Base task)",
     )
+    ref_audio_2: str | None = Field(
+        default=None,
+        description="Second reference audio for two-speaker dialogue (MOSS-TTSD). "
+        "URL, base64, or file URI. Ignored by single-speaker models.",
+    )
+    ambient_sound: str | None = Field(
+        default=None,
+        description="Sound description for ambient/effect synthesis (MOSS-SoundEffect). "
+        "Natural language, e.g. 'ocean waves crashing on a rocky beach'.",
+    )
+    duration_seconds: float | None = Field(
+        default=None,
+        ge=0.0,
+        description="Target audio duration in seconds (MOSS-SoundEffect). Converted to ~12.5 frames/s internally.",
+    )
     x_vector_only_mode: bool | None = Field(
         default=None,
         description="Use speaker embedding only without in-context learning (Base task)",
+    )
+    speaker_embedding: list[float] | None = Field(
+        default=None,
+        max_length=_MAX_EMBEDDING_DIM,
+        description="Pre-computed speaker embedding vector (1024-dim for 0.6B, "
+        "2048-dim for 1.7B). Skips speaker encoder extraction from ref_audio. "
+        "Implies x_vector_only_mode=True. Mutually exclusive with ref_audio.",
     )
     max_new_tokens: int | None = Field(
         default=None,
         description="Maximum tokens to generate",
     )
+    seed: int | None = Field(
+        default=None,
+        ge=0,
+        le=2**63 - 1,
+        description="Random seed for reproducible generation. When set, ensures "
+        "deterministic output for the same input text and seed value.",
+    )
     initial_codec_chunk_frames: int | None = Field(
         default=None,
         ge=0,
         description="Per-request initial chunk size override. If null, computed dynamically based on server load.",
+    )
+    extra_params: dict[str, Any] | None = Field(
+        default=None,
+        description=("Optional model-specific parameters passed directly to the model's extra_args."),
     )
 
     @field_validator("stream_format")
@@ -67,6 +107,112 @@ class OpenAICreateSpeechRequest(BaseModel):
         if v == "sse":
             raise ValueError("'sse' is not a supported stream_format yet. Please use 'audio'.")
         return v
+
+    @field_validator("speaker_embedding")
+    @classmethod
+    def validate_speaker_embedding(cls, v: list[float] | None) -> list[float] | None:
+        if v is not None and not all(math.isfinite(x) for x in v):
+            raise ValueError("'speaker_embedding' values must be finite (no NaN or Inf)")
+        return v
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_references_alias(cls, data):
+        """Map the BosonAI Higgs Audio v3 cookbook ``references`` array onto ``ref_audio`` / ``ref_text``.
+
+        Upstream Higgs Audio v3 examples and the boson.ai cookbook send voice
+        clones as::
+
+            {"references": [{"audio_path": str, "text": str}]}
+
+        vllm-omni's existing convention is ``ref_audio`` + ``ref_text``.
+        Without this alias pydantic silently drops the unknown ``references``
+        field and the request falls through to zero-shot synthesis with no
+        error, which is hard to debug from the client side. The normalizer
+        translates a single reference and rejects multi-reference payloads
+        (vllm-omni does not yet support multi-shot voice clone) or conflicts
+        with the explicit ``ref_audio`` / ``ref_text`` fields.
+        """
+        if not isinstance(data, dict):
+            return data
+        refs = data.get("references")
+        if refs is None:
+            return data
+        if not isinstance(refs, list) or len(refs) == 0:
+            raise ValueError("'references' must be a non-empty array of {audio_path, text} objects")
+        if len(refs) > 1:
+            raise ValueError("'references' only supports a single reference; multi-shot voice clone is not supported")
+        first = refs[0]
+        if not isinstance(first, dict):
+            raise ValueError("'references[0]' must be an object with 'audio_path' and optional 'text'")
+        audio_path = first.get("audio_path")
+        if not isinstance(audio_path, str) or not audio_path:
+            raise ValueError(
+                "'references[0].audio_path' is required and must be a string (URL, data: URI, or file path)"
+            )
+        existing_ref_audio = data.get("ref_audio")
+        if existing_ref_audio and existing_ref_audio != audio_path:
+            raise ValueError("'references' and 'ref_audio' are mutually exclusive")
+        data["ref_audio"] = audio_path
+        text = first.get("text")
+        if isinstance(text, str) and text.strip():
+            existing_ref_text = data.get("ref_text")
+            if existing_ref_text and existing_ref_text != text:
+                raise ValueError("'references[0].text' and 'ref_text' conflict; supply only one")
+            data["ref_text"] = text
+        data.pop("references", None)
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_higgs_audio_v2_unsupported_aliases(cls, data):
+        """Reject unsupported rich-input aliases for higgs_audio_v2 BEFORE pydantic strips them.
+
+        OpenAICreateSpeechRequest is a permissive schema (it accepts any extra
+        field that the OpenAI Speech API didn't promise to ban) but several
+        of those aliases pull a request out of the v1 higgs_audio_v2 scope.
+        Catching them at parse time lets the API return a deterministic 4xx
+        with a model-specific error message instead of silently dropping the
+        field and proceeding with a degraded request.
+        """
+        # Keys that are silently dropped by pydantic when posted to /v1/audio/speech
+        # (the schema doesn't declare them) but which a model-specific
+        # validator MUST be able to reject. Kept inline to avoid clashing
+        # with pydantic's ModelPrivateAttr discovery for class-level
+        # underscore-prefixed attributes.
+        higgs_audio_v2_reserved_keys = (
+            "messages",  # ChatML rich content (out of scope for v1)
+            "reference_audio",  # voice-cloning alias 1
+            "voice_prompt",  # voice-cloning alias 2
+            "speaker_audio",  # voice-cloning alias 3
+            "speakers",  # multi-speaker dialogue
+        )
+        if not isinstance(data, dict):
+            return data
+        model_id = data.get("model")
+        if not isinstance(model_id, str):
+            return data
+        # Match the "higgs_audio_v2" model_type label, the HF architecture id
+        # in pipeline_registry.hf_architectures, and the hyphenated HF repo id
+        # (e.g. "bosonai/higgs-audio-v2-generation-3B-base") by normalizing
+        # both underscores and hyphens out of the id before substring matching.
+        normalized = model_id.lower().replace("-", "").replace("_", "")
+        if "higgsaudiov2" not in normalized:
+            return data
+        offending = sorted(k for k in higgs_audio_v2_reserved_keys if k in data)
+        if offending:
+            raise ValueError(
+                "higgs_audio_v2 v1 does not support these rich-input fields: "
+                f"{offending}. Supply plain text via the 'input' field instead."
+            )
+        return data
+
+    @model_validator(mode="after")
+    def validate_embedding_constraints(self) -> "OpenAICreateSpeechRequest":
+        if self.speaker_embedding is not None:
+            if self.ref_audio is not None:
+                raise ValueError("'speaker_embedding' and 'ref_audio' are mutually exclusive")
+        return self
 
     @model_validator(mode="after")
     def validate_streaming_constraints(self) -> "OpenAICreateSpeechRequest":
@@ -83,6 +229,53 @@ class OpenAICreateSpeechRequest(BaseModel):
                     "Speed adjustment is not supported when streaming (stream=true). Set speed=1.0 or omit it."
                 )
         return self
+
+
+class OpenAICreateAudioGenerateRequest(BaseModel):
+    """Request model for audio generation via diffusion models (e.g. Stable Audio)."""
+
+    input: str = Field(
+        description="Text prompt describing the audio to generate",
+    )
+    model: str | None = None
+    response_format: Literal["wav", "pcm", "flac", "mp3", "aac", "opus"] = "wav"
+    speed: float | None = Field(
+        default=1.0,
+        ge=0.25,
+        le=4.0,
+    )
+    stream_format: Literal["sse", "audio"] | None = "audio"
+    audio_length: float | None = Field(
+        default=None,
+        description="Audio length in seconds",
+    )
+    audio_start: float | None = Field(
+        default=0.0,
+        description="Audio start time in seconds",
+    )
+    negative_prompt: str | None = Field(
+        default=None,
+        description="Negative prompt for classifier-free guidance",
+    )
+    guidance_scale: float | None = Field(
+        default=None,
+        description="Guidance scale for diffusion models",
+    )
+    num_inference_steps: int | None = Field(
+        default=None,
+        description="Number of inference steps",
+    )
+    seed: int | None = Field(
+        default=None,
+        description="Random seed for reproducibility",
+    )
+
+    @field_validator("stream_format")
+    @classmethod
+    def validate_stream_format(cls, v: str) -> str:
+        if v == "sse":
+            raise ValueError("'sse' is not a supported stream_format yet. Please use 'audio'.")
+        return v
 
 
 class CreateAudio(BaseModel):
@@ -110,7 +303,7 @@ class SpeechBatchItem(BaseModel):
     all other fields override the batch-level defaults when set."""
 
     input: str
-    voice: str | None = None
+    voice: str | None = Field(default=None, validation_alias=AliasChoices("voice", "speaker"))
     instructions: str | None = None
     response_format: Literal["wav", "pcm", "flac", "mp3", "aac", "opus"] | None = None
     speed: float | None = Field(default=None, ge=0.25, le=4.0)
@@ -129,7 +322,7 @@ class BatchSpeechRequest(BaseModel):
 
     model: str | None = None
     items: list[SpeechBatchItem] = Field(..., min_length=1)
-    voice: str | None = None
+    voice: str | None = Field(default=None, validation_alias=AliasChoices("voice", "speaker"))
     instructions: str | None = None
     response_format: Literal["wav", "pcm", "flac", "mp3", "aac", "opus"] = "wav"
     speed: float | None = Field(default=1.0, ge=0.25, le=4.0)
@@ -162,7 +355,7 @@ class StreamingSpeechSessionConfig(BaseModel):
     """Configuration sent as the first WebSocket message for streaming TTS."""
 
     model: str | None = None
-    voice: str | None = None
+    voice: str | None = Field(default=None, validation_alias=AliasChoices("voice", "speaker"))
     task_type: Literal["CustomVoice", "VoiceDesign", "Base"] | None = None
     language: str | None = None
     instructions: str | None = None
@@ -177,6 +370,11 @@ class StreamingSpeechSessionConfig(BaseModel):
     ref_audio: str | None = None
     ref_text: str | None = None
     x_vector_only_mode: bool | None = None
+    speaker_embedding: list[float] | None = Field(
+        default=None,
+        max_length=_MAX_EMBEDDING_DIM,
+        description="Pre-computed speaker embedding vector. Mutually exclusive with ref_audio.",
+    )
     stream_audio: bool = Field(
         default=False,
         description=(
