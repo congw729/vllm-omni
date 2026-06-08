@@ -99,6 +99,7 @@ from backends import (
     RequestFuncInput,
     RequestFuncOutput,
     backends_function_mapping,
+    backends_function_mapping_sglang,
     normalize_endpoint,
 )
 from PIL import Image
@@ -1066,7 +1067,8 @@ async def benchmark(args):
         raw_endpoint = _default_endpoint_for_task(args.task)
     args.endpoint = normalize_endpoint(raw_endpoint)
 
-    valid_endpoints = sorted(backends_function_mapping[task_type].keys())
+    mapping = backends_function_mapping_sglang if args.request_backend == "sglang" else backends_function_mapping
+    valid_endpoints = sorted(mapping[task_type].keys())
 
     if args.endpoint not in valid_endpoints:
         logger.error(
@@ -1077,7 +1079,7 @@ async def benchmark(args):
         raise ValueError("Endpoint validation failed. See log above for valid options.")
 
     # Setup API URL and request function based on endpoint.
-    request_func, api_url = backends_function_mapping[task_type][args.endpoint]
+    request_func, api_url = mapping[task_type][args.endpoint]
     api_url = f"{args.base_url}{api_url}"
 
     if args.dataset == "vbench":
@@ -1147,6 +1149,7 @@ async def benchmark(args):
 
     # Add configuration info to metrics for JSON output
     metrics["endpoint"] = args.endpoint
+    metrics["request_backend"] = args.request_backend
     metrics["model"] = args.model
     metrics["dataset"] = args.dataset
     metrics["task"] = args.task
@@ -1229,6 +1232,13 @@ if __name__ == "__main__":
         "--backend",
         type=str,
         default=None,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--request-backend",
+        type=str,
+        default="vllm_omni",
+        choices=["vllm_omni", "sglang"],
         help=argparse.SUPPRESS,
     )
     parser.add_argument(
