@@ -458,6 +458,9 @@ async def async_request_image_sglang(
         if input.width and input.height:
             form.add_field("size", f"{input.width}x{input.height}")
 
+        if input.num_inference_steps:
+            form.add_field("num_inference_steps", str(input.num_inference_steps))
+
         for key, value in input.extra_body.items():
             form.add_field(key, str(value))
 
@@ -707,6 +710,7 @@ backends_function_mapping = {
 backends_function_mapping_sglang = {
     "2i": {
         "/v1/images/generations": (async_request_image_sglang, "/v1/images/generations"),
+        "/v1/images/edits": (async_request_image_edits, "/v1/images/edits"),
     },
     "2v": {
         "/v1/videos": (async_request_video_sglang, "/v1/videos"),

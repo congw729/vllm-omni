@@ -438,13 +438,8 @@ class SglangServer:
             self.host,
             "--port",
             str(self.port),
-            "--warmup",
-            "true",
-            "--warmup-resolutions",
-            "512x512",
-            "--warmup-steps",
-            "1",
-        ] + self.serve_args
+        ]
+        cmd += self.serve_args
 
         if self.cache_dit_config is not None:
             self._tmp_yaml = self._write_cache_dit_yaml(self.cache_dit_config)
@@ -945,13 +940,18 @@ def assert_result(
 
 def _default_benchmark_endpoint_for_task(task: str, server_type: str = "vllm-omni") -> str:
     """Return the default client-side benchmark endpoint for a diffusion task."""
-    if task in {"t2v", "i2v", "ti2v"}:
-        return "/v1/videos"
-    if task in {"t2i", "i2i", "ti2i"}:
-        if server_type == "sglang":
+    if server_type == "sglang":
+        if task == "t2i":
             return "/v1/images/generations"
-        return "/v1/chat/completions"
-    raise ValueError(f"Unsupported task for benchmark endpoint resolution: {task}")
+        if task in {"i2i", "ti2i"}:
+            return "/v1/images/edits"
+        raise ValueError(f"Unsupported task for sglang endpoint resolution: {task}")
+    else: # vllm-omni
+        if task in {"t2v", "i2v", "ti2v"}:
+            return "/v1/videos"
+        if task in {"t2i", "i2i", "ti2i"}:
+            return "/v1/chat/completions"
+    raise ValueError(f"Unsupported task for endpoint resolution: {task}")
 
 
 def _resolve_benchmark_endpoint(server_cfg: dict[str, Any], params: dict[str, Any]) -> str:
