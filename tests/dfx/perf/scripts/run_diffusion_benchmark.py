@@ -438,6 +438,12 @@ class SglangServer:
             self.host,
             "--port",
             str(self.port),
+            "--warmup",
+            "true",
+            "--warmup-resolutions",
+            "512x512",
+            "--warmup-steps",
+            "1",
         ] + self.serve_args
 
         if self.cache_dit_config is not None:
