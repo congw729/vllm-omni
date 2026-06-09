@@ -1033,13 +1033,19 @@ def wait_for_service(base_url: str, timeout: int = 120) -> None:
         time.sleep(1)
 
 
-def _default_endpoint_for_task(task: str) -> str:
-    if task in {"t2v", "i2v", "ti2v"}:
-        return "/v1/videos"
-    if task in {"i2i", "ti2i", "it2i"}:
-        return "/v1/images/edits"
-    if task == "t2i":
-        return "/v1/chat/completions"
+def _default_endpoint_for_task(task: str, request_backend: str = "vllm_omni") -> str:
+    if request_backend == "sglang":
+        if task == "t2i":
+            return "/v1/images/generations"
+        if task in {"i2i", "ti2i"}:
+            return "/v1/images/edits"
+    else: # vllm-omni
+        if task in {"t2v", "i2v", "ti2v"}:
+            return "/v1/videos"
+        if task in {"i2i", "ti2i", "it2i"}:
+            return "/v1/images/edits"
+        if task == "t2i":
+            return "/v1/chat/completions"
     raise ValueError(f"Unsupported task for endpoint resolution: {task}")
 
 
@@ -1064,7 +1070,7 @@ async def benchmark(args):
 
     raw_endpoint = args.endpoint if args.endpoint is not None else args.backend
     if raw_endpoint is None:
-        raw_endpoint = _default_endpoint_for_task(args.task)
+        raw_endpoint = _default_endpoint_for_task(args.task, args.request_backend)
     args.endpoint = normalize_endpoint(raw_endpoint)
 
     mapping = backends_function_mapping_sglang if args.request_backend == "sglang" else backends_function_mapping
