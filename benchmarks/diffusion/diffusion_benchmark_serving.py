@@ -99,6 +99,7 @@ from backends import (
     RequestFuncInput,
     RequestFuncOutput,
     backends_function_mapping,
+    backends_function_mapping_sglang,
     normalize_endpoint,
 )
 from PIL import Image
@@ -1032,13 +1033,19 @@ def wait_for_service(base_url: str, timeout: int = 120) -> None:
         time.sleep(1)
 
 
-def _default_endpoint_for_task(task: str) -> str:
-    if task in {"t2v", "i2v", "ti2v"}:
-        return "/v1/videos"
-    if task in {"i2i", "ti2i", "it2i"}:
-        return "/v1/images/edits"
-    if task == "t2i":
-        return "/v1/chat/completions"
+def _default_endpoint_for_task(task: str, request_backend: str = "vllm_omni") -> str:
+    if request_backend == "sglang":
+        if task == "t2i":
+            return "/v1/images/generations"
+        if task in {"i2i", "ti2i"}:
+            return "/v1/images/edits"
+    else: # vllm-omni
+        if task in {"t2v", "i2v", "ti2v"}:
+            return "/v1/videos"
+        if task in {"i2i", "ti2i", "it2i"}:
+            return "/v1/images/edits"
+        if task == "t2i":
+            return "/v1/chat/completions"
     raise ValueError(f"Unsupported task for endpoint resolution: {task}")
 
 
@@ -1063,10 +1070,11 @@ async def benchmark(args):
 
     raw_endpoint = args.endpoint if args.endpoint is not None else args.backend
     if raw_endpoint is None:
-        raw_endpoint = _default_endpoint_for_task(args.task)
+        raw_endpoint = _default_endpoint_for_task(args.task, args.request_backend)
     args.endpoint = normalize_endpoint(raw_endpoint)
 
-    valid_endpoints = sorted(backends_function_mapping[task_type].keys())
+    mapping = backends_function_mapping_sglang if args.request_backend == "sglang" else backends_function_mapping
+    valid_endpoints = sorted(mapping[task_type].keys())
 
     if args.endpoint not in valid_endpoints:
         logger.error(
@@ -1077,7 +1085,7 @@ async def benchmark(args):
         raise ValueError("Endpoint validation failed. See log above for valid options.")
 
     # Setup API URL and request function based on endpoint.
-    request_func, api_url = backends_function_mapping[task_type][args.endpoint]
+    request_func, api_url = mapping[task_type][args.endpoint]
     api_url = f"{args.base_url}{api_url}"
 
     if args.dataset == "vbench":
@@ -1147,6 +1155,7 @@ async def benchmark(args):
 
     # Add configuration info to metrics for JSON output
     metrics["endpoint"] = args.endpoint
+    metrics["request_backend"] = args.request_backend
     metrics["model"] = args.model
     metrics["dataset"] = args.dataset
     metrics["task"] = args.task
@@ -1229,6 +1238,13 @@ if __name__ == "__main__":
         "--backend",
         type=str,
         default=None,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--request-backend",
+        type=str,
+        default="vllm_omni",
+        choices=["vllm_omni", "sglang"],
         help=argparse.SUPPRESS,
     )
     parser.add_argument(

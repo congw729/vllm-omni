@@ -21,6 +21,7 @@ timestamp) together with the raw metrics returned by the benchmark script.
 
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -117,6 +118,23 @@ BENCHMARK_RESULT_DIR = Path(os.environ.get("DIFFUSION_BENCHMARK_DIR", str(_DEFAU
 BENCHMARK_SCRIPT = str(
     Path(__file__).parent.parent.parent.parent.parent / "benchmarks" / "diffusion" / "diffusion_benchmark_serving.py"
 )
+
+
+def _resolve_sglang_executable() -> str:
+    """Resolve the sglang CLI for local venvs, CI images, or PATH."""
+    configured = os.environ.get("SGLANG_EXECUTABLE")
+    if configured:
+        return configured
+
+    sibling = Path(sys.executable).with_name("sglang")
+    if sibling.is_file():
+        return str(sibling)
+
+    discovered = shutil.which("sglang")
+    if discovered:
+        return discovered
+
+    return "sglang"
 
 # Single aggregated result file for the entire benchmark session.
 # Populated lazily after CONFIG_FILE_PATH is resolved.
@@ -351,18 +369,122 @@ class DiffusionServer:
             _kill_process_tree(self.proc.pid)
 
 
+def _check_cache_dit_version() -> None:
+    required = os.environ.get("CACHE_DIT_VERSION")
+    if not required:
+        return
+    import importlib.metadata
+
+    try:
+        installed = importlib.metadata.version("cache-dit")
+    except importlib.metadata.PackageNotFoundError:
+        raise RuntimeError(
+            f"cache-dit is not installed. Please install version {required}: pip install cache-dit=={required}"
+        )
+    if installed != required:
+        raise RuntimeError(
+            f"cache-dit version mismatch: required {required}, "
+            f"but found {installed}. "
+            f"Please install the correct version: pip install cache-dit=={required}"
+        )
+
+
+class SglangServer:
+    server_type = "sglang"
+
+    def __init__(
+        self,
+        server_cfg: dict[str, Any],
+        *,
+        port: int | None = None,
+    ) -> None:
+        self.server_cfg: dict[str, Any] = server_cfg
+        self.model = server_cfg["model"]
+        self.serve_args = server_cfg["serve_args"]
+        self.host = "127.0.0.1"
+        self.port = port if port is not None else _get_open_port()
+        self.env_overrides = server_cfg.get("env_overrides", {})
+        self.cache_dit_config = server_cfg.get("cache_dit_config")
+        self.proc: subprocess.Popen | None = None
+        self._tmp_yaml: str | None = None
+        self.test_name: str = ""
+        if self.cache_dit_config is not None:
+            _check_cache_dit_version()
+
+    @staticmethod
+    def _write_cache_dit_yaml(config: dict[str, Any]) -> str:
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+        try:
+            import yaml
+
+            yaml.dump(config, tmp, default_flow_style=False, allow_unicode=True)
+        except ImportError:
+            json.dump(config, tmp, indent=2, ensure_ascii=False)
+            tmp.write("\n")
+        tmp.close()
+        print(f"  Cache-DiT config written to: {tmp.name}")
+        return tmp.name
+
+    def _start_server(self) -> None:
+        env = os.environ.copy()
+        env.update(self.env_overrides)
+
+        cmd = [
+            _resolve_sglang_executable(),
+            "serve",
+            "--model-path",
+            self.model,
+            "--host",
+            self.host,
+            "--port",
+            str(self.port),
+        ]
+        cmd += self.serve_args
+
+        if self.cache_dit_config is not None:
+            self._tmp_yaml = self._write_cache_dit_yaml(self.cache_dit_config)
+            cmd += ["--cache-dit-config", self._tmp_yaml]
+
+        print(f"Launching SglangServer: {' '.join(cmd)}")
+        if self.env_overrides:
+            print(f"  Extra env: {self.env_overrides}")
+
+        self.proc = subprocess.Popen(
+            cmd,
+            env=env,
+            cwd=str(Path(__file__).parent.parent.parent.parent),
+        )
+        _wait_for_port(self.host, self.port, proc=self.proc)
+        print(f"SglangServer ready on {self.host}:{self.port}")
+
+    def __enter__(self):
+        self._start_server()
+        return self
+
+    def __exit__(self, *_):
+        if self.proc:
+            _kill_process_tree(self.proc.pid)
+        if self._tmp_yaml:
+            try:
+                Path(self._tmp_yaml).unlink(missing_ok=True)
+            except Exception:
+                pass
+
+
 # ---------------------------------------------------------------------------
 # Config helpers
 # ---------------------------------------------------------------------------
 
 
-def _build_serve_args(serve_args_dict: dict[str, Any]) -> list[str]:
+def _build_serve_args(serve_args_dict: dict[str, Any], server_type: str = "vllm-omni") -> list[str]:
     """Convert a serve_args dict from test.json into a flat CLI argument list."""
     args: list[str] = []
     for key, value in serve_args_dict.items():
         flag = f"--{key}"
         if isinstance(value, bool):
-            if value:
+            if server_type == "sglang":
+                args.extend([flag, str(value).lower()])
+            elif value:
                 args.append(flag)
         elif isinstance(value, dict):
             args.extend([flag, json.dumps(value, separators=(",", ":"))])
@@ -422,6 +544,17 @@ def _to_parallelism_string(framework: str, serve_args_dict: dict[str, Any]) -> s
         for key in keys:
             if key in serve_args_dict:
                 parts.append(f"{key}={serve_args_dict[key]}")
+    elif framework == "sglang":
+        keys = [
+            "num-gpus",
+            "sp-degree",
+            "ulysses-degree",
+            "enable-cfg-parallel",
+            "vae-config.use-parallel-tiling",
+        ]
+        for key in keys:
+            if key in serve_args_dict:
+                parts.append(f"{key}={serve_args_dict[key]}")
     return ",".join(parts) if parts else "none"
 
 
@@ -470,7 +603,7 @@ def _unique_server_params(configs: list[dict[str, Any]]) -> list[dict[str, Any]]
             continue
         seen.add(test_name)
         server_type = cfg.get("server_type", "vllm-omni")
-        if server_type != "vllm-omni":
+        if server_type not in {"vllm-omni", "sglang"}:
             raise ValueError(f"Unsupported server_type in config: {server_type}")
         serve_args_dict = cfg["server_params"].get("serve_args", {})
         result.append(
@@ -479,8 +612,10 @@ def _unique_server_params(configs: list[dict[str, Any]]) -> list[dict[str, Any]]
                 "server_type": server_type,
                 "model": cfg["server_params"]["model"],
                 "serve_args_dict": serve_args_dict,
-                "serve_args": _build_serve_args(serve_args_dict),
+                "serve_args": _build_serve_args(serve_args_dict, server_type),
                 "benchmark_endpoint": cfg.get("benchmark_endpoint", cfg.get("benchmark_backend")),
+                "env_overrides": cfg["server_params"].get("env", {}),
+                "cache_dit_config": cfg["server_params"].get("cache_dit_config"),
                 "server_params": cfg["server_params"],
             }
         )
@@ -496,8 +631,10 @@ def _test_param_mapping(configs: list[dict[str, Any]]) -> dict[str, list[dict]]:
     return mapping
 
 
-def _make_server(server_cfg: dict[str, Any]) -> DiffusionServer:
-    """Factory: return a vLLM-Omni diffusion server instance for the config."""
+def _make_server(server_cfg: dict[str, Any]) -> DiffusionServer | SglangServer:
+    """Factory: return the serving process for the config."""
+    if server_cfg["server_type"] == "sglang":
+        return SglangServer(server_cfg=server_cfg)
     return DiffusionServer(server_cfg=server_cfg)
 
 
@@ -578,6 +715,9 @@ def run_benchmark(
     """
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     endpoint = normalize_endpoint(endpoint)
+    server_cfg = server_cfg or {}
+    server_type = cast(str, server_cfg.get("server_type", "vllm-omni"))
+    request_backend = "sglang" if server_type == "sglang" else "vllm_omni"
 
     log_dir = BENCHMARK_RESULT_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -592,6 +732,8 @@ def run_benchmark(
     cmd = [
         sys.executable,
         BENCHMARK_SCRIPT,
+        "--request-backend",
+        request_backend,
         "--host",
         host,
         "--port",
@@ -667,8 +809,6 @@ def run_benchmark(
     finally:
         tmp_result_file.unlink(missing_ok=True)
 
-    server_cfg = server_cfg or {}
-    server_type = cast(str, server_cfg.get("server_type", "vllm-omni"))
     serve_args_dict = server_cfg.get("serve_args_dict", {})
     if not isinstance(serve_args_dict, dict):
         serve_args_dict = {}
@@ -679,6 +819,7 @@ def run_benchmark(
     record: dict[str, Any] = {
         "test_name": test_name,
         "endpoint": endpoint,
+        "request_backend": request_backend,
         "timestamp": timestamp,
         "server_params": server_cfg.get("server_params"),
         "benchmark_params": params,
@@ -687,6 +828,7 @@ def run_benchmark(
         "Model": model,
         "Framework": server_type,
         "API Endpoint": endpoint,
+        "Request Backend": request_backend,
         "Hardware": "",
         "Deployment": "",
         "Task": params.get("task", "t2i"),
@@ -796,13 +938,20 @@ def assert_result(
             assert current <= threshold, f"{metric}: {current:.4f} > baseline {threshold}"
 
 
-def _default_benchmark_endpoint_for_task(task: str) -> str:
+def _default_benchmark_endpoint_for_task(task: str, server_type: str = "vllm-omni") -> str:
     """Return the default client-side benchmark endpoint for a diffusion task."""
-    if task in {"t2v", "i2v", "ti2v"}:
-        return "/v1/videos"
-    if task in {"t2i", "i2i", "ti2i"}:
-        return "/v1/chat/completions"
-    raise ValueError(f"Unsupported task for benchmark endpoint resolution: {task}")
+    if server_type == "sglang":
+        if task == "t2i":
+            return "/v1/images/generations"
+        if task in {"i2i", "ti2i"}:
+            return "/v1/images/edits"
+        raise ValueError(f"Unsupported task for sglang endpoint resolution: {task}")
+    else: # vllm-omni
+        if task in {"t2v", "i2v", "ti2v"}:
+            return "/v1/videos"
+        if task in {"t2i", "i2i", "ti2i"}:
+            return "/v1/chat/completions"
+    raise ValueError(f"Unsupported task for endpoint resolution: {task}")
 
 
 def _resolve_benchmark_endpoint(server_cfg: dict[str, Any], params: dict[str, Any]) -> str:
@@ -810,7 +959,10 @@ def _resolve_benchmark_endpoint(server_cfg: dict[str, Any], params: dict[str, An
     configured = server_cfg.get("benchmark_endpoint")
     if configured:
         return normalize_endpoint(cast(str, configured))
-    return _default_benchmark_endpoint_for_task(cast(str, params.get("task", "t2i")))
+    return _default_benchmark_endpoint_for_task(
+        cast(str, params.get("task", "t2i")),
+        cast(str, server_cfg.get("server_type", "vllm-omni")),
+    )
 
 
 def _to_list(value: Any) -> list[Any]:

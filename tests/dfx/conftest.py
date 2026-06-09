@@ -10,10 +10,6 @@ from typing import Any
 
 import pytest
 
-from tests.dfx.reliability.helpers import list_remote_process_pids_by_pattern, post_chat_completions_raw
-from tests.helpers.runtime import OmniServerParams
-from tests.helpers.stage_config import modify_stage_config
-from vllm_omni.platforms import current_omni_platform
 
 
 def load_configs(config_path: str) -> list[dict[str, Any]]:
@@ -39,6 +35,7 @@ def modify_stage(default_path: str, updates: dict[str, Any] | None, deletes: dic
     if deletes is not None:
         kwargs["deletes"] = deletes
     if kwargs:
+        from tests.helpers.stage_config import modify_stage_config
         return modify_stage_config(default_path, **kwargs)
     return default_path
 
@@ -124,6 +121,7 @@ def create_unique_server_params(
 
 def configs_with_platform_stage_configs(configs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Resolve stage config for XPU vs CUDA/ROCm."""
+    from vllm_omni.platforms import current_omni_platform
     out: list[dict[str, Any]] = []
     for config in configs:
         config_copy = json.loads(json.dumps(config))
@@ -145,7 +143,8 @@ def extract_server_args_by_test_name(configs: list[dict[str, Any]]) -> dict[str,
 
 def create_reliability_omni_server_params(
     configs: list[dict[str, Any]], stage_configs_dir: Path
-) -> list[OmniServerParams]:
+) -> list["OmniServerParams"]:
+    from tests.helpers.runtime import OmniServerParams
     adjusted_configs = configs_with_platform_stage_configs(configs)
     unique_params = create_unique_server_params(adjusted_configs, stage_configs_dir)
     server_args_by_name = extract_server_args_by_test_name(adjusted_configs)
@@ -199,6 +198,8 @@ def assert_fault_exception(exc: Exception, error_keywords: tuple[str, ...]) -> N
 
 def wait_chat_request_ready(host: str, port: int, model: str, timeout_sec: int = 180) -> None:
     """Poll a minimal chat request until success."""
+    from tests.dfx.reliability.helpers import post_chat_completions_raw
+
     deadline = time.time() + timeout_sec
     payload = json.dumps(
         {
@@ -227,6 +228,7 @@ def assert_no_extra_worker_processes(
     timeout_sec: int = 60,
 ) -> None:
     """Ensure no extra worker PIDs remain after teardown."""
+    from tests.dfx.reliability.helpers import list_remote_process_pids_by_pattern
     deadline = time.time() + timeout_sec
     while time.time() < deadline:
         current = set(list_remote_process_pids_by_pattern(worker_pattern))
