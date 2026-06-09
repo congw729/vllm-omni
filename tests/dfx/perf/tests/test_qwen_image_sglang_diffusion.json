@@ -51,7 +51,7 @@
     },
     {
         "test_name": "test_sglang_qwen_image_ulysses2_cfg2_vae_patch4",
-        "description": "sglang: USP=2 + CFG-parallel=2 + VAE patch parallel via --use-parallel-tiling",
+        "description": "sglang: USP=2 + CFG-parallel=2 + VAE Parallel Tiling",
         "server_type": "sglang",
         "server_params": {
             "model": "Qwen/Qwen-Image",
@@ -60,7 +60,7 @@
                 "sp-degree": 2,
                 "ulysses-degree": 2,
                 "enable-cfg-parallel": true,
-                "use-parallel-tiling": true,
+                "vae-config.use-parallel-tiling": true,
                 "dit-cpu-offload": false,
                 "text-encoder-cpu-offload": false,
                 "vae-cpu-offload": false
@@ -88,7 +88,7 @@
     },
     {
         "test_name": "test_sglang_qwen_image_ulysses2_cfg2_cache_dit",
-        "description": "sglang: USP=2 + CFG-parallel=2 + Cache-DiT via YAML config (--cache-dit-config)",
+        "description": "sglang: USP=2 + CFG-parallel=2 + Cache-DiT (cache_dit_config as YAML --cache-dit-config)",
         "server_type": "sglang",
         "server_params": {
             "model": "Qwen/Qwen-Image",

@@ -21,6 +21,7 @@ timestamp) together with the raw metrics returned by the benchmark script.
 
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -117,6 +118,23 @@ BENCHMARK_RESULT_DIR = Path(os.environ.get("DIFFUSION_BENCHMARK_DIR", str(_DEFAU
 BENCHMARK_SCRIPT = str(
     Path(__file__).parent.parent.parent.parent.parent / "benchmarks" / "diffusion" / "diffusion_benchmark_serving.py"
 )
+
+
+def _resolve_sglang_executable() -> str:
+    """Resolve the sglang CLI for local venvs, CI images, or PATH."""
+    configured = os.environ.get("SGLANG_EXECUTABLE")
+    if configured:
+        return configured
+
+    sibling = Path(sys.executable).with_name("sglang")
+    if sibling.is_file():
+        return str(sibling)
+
+    discovered = shutil.which("sglang")
+    if discovered:
+        return discovered
+
+    return "sglang"
 
 # Single aggregated result file for the entire benchmark session.
 # Populated lazily after CONFIG_FILE_PATH is resolved.
@@ -412,7 +430,7 @@ class SglangServer:
         env.update(self.env_overrides)
 
         cmd = [
-            "sglang",
+            _resolve_sglang_executable(),
             "serve",
             "--model-path",
             self.model,
@@ -531,7 +549,7 @@ def _to_parallelism_string(framework: str, serve_args_dict: dict[str, Any]) -> s
             "sp-degree",
             "ulysses-degree",
             "enable-cfg-parallel",
-            "use-parallel-tiling",
+            "vae-config.use-parallel-tiling",
         ]
         for key in keys:
             if key in serve_args_dict:
