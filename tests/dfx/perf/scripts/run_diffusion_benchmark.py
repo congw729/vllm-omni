@@ -36,6 +36,7 @@ import psutil
 import pytest
 
 from benchmarks.diffusion.backends import endpoint_filename_token, normalize_endpoint
+from benchmarks.diffusion.sglang_perf import merge_sglang_perf_dumps_into_metrics
 
 pytestmark = [pytest.mark.diffusion, pytest.mark.full_model]
 
@@ -727,6 +728,16 @@ def run_benchmark(
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", prefix="diffusion_bench_tmp_", delete=False) as tmp:
         tmp_result_file = Path(tmp.name)
 
+    # SGLang don't return per-stage metrics in response. It dumps them to a directory instead.
+    perf_dump_dir: Path | None = None
+    if request_backend == "sglang":
+        perf_dump_dir = (
+            BENCHMARK_RESULT_DIR
+            / "sglang_perf_dumps"
+            / f"{test_name}_{endpoint_label}_{timestamp}"
+        )
+        perf_dump_dir.mkdir(parents=True, exist_ok=True)
+
     exclude_keys = {"baseline", "dataset", "task", "name", "skip-performance-assertion"}
 
     cmd = [
@@ -749,6 +760,8 @@ def run_benchmark(
         "--output-file",
         str(tmp_result_file),
     ]
+    if perf_dump_dir is not None:
+        cmd.extend(["--perf-dump-dir", str(perf_dump_dir.resolve())])
 
     for key, value in params.items():
         if key in exclude_keys or value is None:
@@ -808,6 +821,9 @@ def run_benchmark(
             metrics: dict[str, Any] = json.load(f)
     finally:
         tmp_result_file.unlink(missing_ok=True)
+
+    if perf_dump_dir is not None:
+        metrics = merge_sglang_perf_dumps_into_metrics(perf_dump_dir, metrics)
 
     serve_args_dict = server_cfg.get("serve_args_dict", {})
     if not isinstance(serve_args_dict, dict):

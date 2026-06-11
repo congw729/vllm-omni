@@ -901,6 +901,29 @@ async def iter_requests(
         yield req
 
 
+async def enumerate_async_requests(
+    requests_list: list[RequestFuncInput],
+    request_rate: float,
+    perf_dump_dir: str | None = None,
+) -> AsyncGenerator[RequestFuncInput, None]:
+    """Like iter_requests, but optionally attach per-request SGLang perf dump paths."""
+    if perf_dump_dir:
+        os.makedirs(perf_dump_dir, exist_ok=True)
+
+    if request_rate != float("inf"):
+        if request_rate <= 0:
+            raise ValueError(f"request_rate must be positive or inf, got {request_rate}.")
+
+    for i, req in enumerate(requests_list):
+        if request_rate != float("inf") and i > 0:
+            interval_s = random.expovariate(request_rate)
+            await asyncio.sleep(interval_s)
+        if perf_dump_dir:
+            dump_path = os.path.join(os.path.abspath(perf_dump_dir), f"req_{i:04d}.json")
+            req = replace(req, perf_dump_path=dump_path)
+        yield req
+
+
 def _make_warmup_request(
     requests_list: list[RequestFuncInput],
     index: int,
@@ -1141,7 +1164,11 @@ async def benchmark(args):
 
         start_time = time.perf_counter()
         tasks = []
-        async for req in iter_requests(requests_list=requests_list, request_rate=args.request_rate):
+        async for req in enumerate_async_requests(
+            requests_list=requests_list,
+            request_rate=args.request_rate,
+            perf_dump_dir=args.perf_dump_dir,
+        ):
             task = asyncio.create_task(limited_request_func(req, session, pbar))
             tasks.append(task)
 
@@ -1324,6 +1351,15 @@ if __name__ == "__main__":
     )
     parser.add_argument("--fps", type=int, default=None, help="FPS (for video).")
     parser.add_argument("--output-file", type=str, default=None, help="Output JSON file for metrics.")
+    parser.add_argument(
+        "--perf-dump-dir",
+        type=str,
+        default=None,
+        help=(
+            "Directory for SGLang per-request perf_dump_path JSON files. "
+            "Each measured request writes req_XXXX.json with per-stage timings."
+        ),
+    )
     parser.add_argument(
         "--slo",
         action="store_true",

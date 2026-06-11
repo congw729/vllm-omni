@@ -6,6 +6,7 @@ import os
 import time
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import aiohttp
@@ -31,6 +32,7 @@ class RequestFuncInput:
     image_paths: list[str] | None = None
     request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     default_bot_task: str | None = DEFAULT_EDITS_BOT_TASK
+    perf_dump_path: str | None = None
 
 
 @dataclass
@@ -105,6 +107,8 @@ async def async_request_image_edits(
         bot_task = input.default_bot_task
     if bot_task is not None:
         form.add_field("bot_task", str(bot_task))
+    if input.perf_dump_path is not None:
+        form.add_field("perf_dump_path", input.perf_dump_path)
 
     assert input.image_paths is not None
     for img_path in input.image_paths:
@@ -137,6 +141,9 @@ async def async_request_image_edits(
         output.success = False
 
     output.latency = time.perf_counter() - output.start_time
+
+    if output.success and input.perf_dump_path is not None:
+        output.stage_durations = _stage_durations_from_sglang_dump_path(input.perf_dump_path)
 
     if output.success and input.slo_ms is not None:
         output.slo_achieved = (output.latency * 1000.0) <= float(input.slo_ms)
@@ -235,6 +242,9 @@ async def async_request_chat_completions(
         output.success = False
 
     output.latency = time.perf_counter() - output.start_time
+
+    if output.success and input.perf_dump_path is not None:
+        output.stage_durations = _stage_durations_from_sglang_dump_path(input.perf_dump_path)
 
     if output.success and input.slo_ms is not None:
         output.slo_achieved = (output.latency * 1000.0) <= float(input.slo_ms)
@@ -463,6 +473,8 @@ async def async_request_image_sglang(
 
         for key, value in input.extra_body.items():
             form.add_field(key, str(value))
+        if input.perf_dump_path is not None:
+            form.add_field("perf_dump_path", input.perf_dump_path)
 
         for img_path in input.image_paths:
             if not os.path.exists(img_path):
@@ -506,6 +518,8 @@ async def async_request_image_sglang(
             payload["size"] = f"{input.width}x{input.height}"
         if input.num_inference_steps:
             payload["num_inference_steps"] = input.num_inference_steps
+        if input.perf_dump_path is not None:
+            payload["perf_dump_path"] = input.perf_dump_path
 
         payload.update(input.extra_body)
 
@@ -524,6 +538,9 @@ async def async_request_image_sglang(
             output.error = str(e)
             output.success = False
 
+    if output.success and input.perf_dump_path is not None:
+        output.stage_durations = _stage_durations_from_sglang_dump_path(input.perf_dump_path)
+
     output.latency = time.perf_counter() - output.start_time
 
     if input.slo_ms is not None and output.success:
@@ -532,6 +549,14 @@ async def async_request_image_sglang(
     if pbar:
         pbar.update(1)
     return output
+
+
+def _stage_durations_from_sglang_dump_path(perf_dump_path: str | None) -> dict[str, float]:
+    if perf_dump_path is None:
+        return {}
+    from sglang_perf import load_sglang_perf_dump
+
+    return load_sglang_perf_dump(Path(perf_dump_path)) or {}
 
 
 async def async_request_video_sglang(
