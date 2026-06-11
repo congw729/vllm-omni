@@ -32,25 +32,25 @@
                 "percentile-metrics": "ttft,tpot,itl,e2el,audio_rtf,audio_ttfp,audio_duration",
                 "baseline": {
                     "mean_ttft_ms": [
-                        400,
-                        300,
-                        400,
-                        600,
-                        900
+                        136,
+                        283,
+                        461,
+                        455,
+                        829
                     ],
                     "mean_e2el_ms": [
-                        32000,
-                        34000,
-                        45000,
-                        61000,
-                        90000
+                        27765,
+                        34669,
+                        43197,
+                        53022,
+                        76128
                     ],
                     "mean_audio_rtf": [
-                        0.20,
-                        0.25,
-                        0.30,
-                        0.45,
-                        0.60
+                        0.2,
+                        0.23,
+                        0.27,
+                        0.38,
+                        0.54
                     ]
                 }
             },
@@ -79,13 +79,13 @@
                 "percentile-metrics": "ttft,tpot,itl,e2el,audio_rtf,audio_ttfp,audio_duration",
                 "baseline": {
                     "mean_ttft_ms": [
-                        500
+                        363
                     ],
                     "mean_e2el_ms": [
-                        6000
+                        5364
                     ],
                     "mean_audio_rtf": [
-                        0.20
+                        0.17
                     ]
                 }
             },
@@ -116,13 +116,13 @@
                 "percentile-metrics": "ttft,tpot,itl,e2el,audio_rtf,audio_ttfp,audio_duration",
                 "baseline": {
                     "mean_ttft_ms": [
-                        300
+                        257
                     ],
                     "mean_e2el_ms": [
-                        7000
+                        5719
                     ],
                     "mean_audio_rtf": [
-                        0.20
+                        0.2
                     ]
                 }
             },
@@ -155,13 +155,13 @@
                 "percentile-metrics": "ttft,tpot,itl,e2el,audio_rtf,audio_ttfp,audio_duration",
                 "baseline": {
                     "mean_ttft_ms": [
-                        700
+                        1744
                     ],
                     "mean_e2el_ms": [
-                        9000
+                        9817
                     ],
                     "mean_audio_rtf": [
-                        0.30
+                        0.32
                     ]
                 }
             }
