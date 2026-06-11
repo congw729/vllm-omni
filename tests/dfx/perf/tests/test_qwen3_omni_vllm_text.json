@@ -40,18 +40,18 @@
                 "percentile-metrics": "ttft,tpot,itl,e2el",
                 "baseline": {
                     "mean_ttft_ms": [
-                        300,
-                        300,
-                        1000,
-                        600,
-                        800
+                        90,
+                        355,
+                        348,
+                        514,
+                        703
                     ],
                     "mean_e2el_ms": [
-                        6000,
-                        8000,
-                        11000,
-                        13000,
-                        17000
+                        5212,
+                        8875,
+                        11085,
+                        15008,
+                        20113
                     ]
                 }
             },
@@ -86,10 +86,10 @@
                 "percentile-metrics": "ttft,tpot,itl,e2el",
                 "baseline": {
                     "mean_ttft_ms": [
-                        30
+                        31
                     ],
                     "mean_e2el_ms": [
-                        540
+                        579
                     ]
                 }
             },
@@ -126,10 +126,10 @@
                 "percentile-metrics": "ttft,tpot,itl,e2el",
                 "baseline": {
                     "mean_ttft_ms": [
-                        30
+                        32
                     ],
                     "mean_e2el_ms": [
-                        600
+                        625
                     ]
                 }
             },
@@ -168,10 +168,10 @@
                 "percentile-metrics": "ttft,tpot,itl,e2el",
                 "baseline": {
                     "mean_ttft_ms": [
-                        40
+                        35
                     ],
                     "mean_e2el_ms": [
-                        700
+                        681
                     ]
                 }
             }
