@@ -6,10 +6,12 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
+if TYPE_CHECKING:
+    from tests.helpers.runtime import OmniServerParams
 
 
 def load_configs(config_path: str) -> list[dict[str, Any]]:
@@ -36,6 +38,7 @@ def modify_stage(default_path: str, updates: dict[str, Any] | None, deletes: dic
         kwargs["deletes"] = deletes
     if kwargs:
         from tests.helpers.stage_config import modify_stage_config
+
         return modify_stage_config(default_path, **kwargs)
     return default_path
 
@@ -122,6 +125,7 @@ def create_unique_server_params(
 def configs_with_platform_stage_configs(configs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Resolve stage config for XPU vs CUDA/ROCm."""
     from vllm_omni.platforms import current_omni_platform
+
     out: list[dict[str, Any]] = []
     for config in configs:
         config_copy = json.loads(json.dumps(config))
@@ -145,6 +149,7 @@ def create_reliability_omni_server_params(
     configs: list[dict[str, Any]], stage_configs_dir: Path
 ) -> list["OmniServerParams"]:
     from tests.helpers.runtime import OmniServerParams
+
     adjusted_configs = configs_with_platform_stage_configs(configs)
     unique_params = create_unique_server_params(adjusted_configs, stage_configs_dir)
     server_args_by_name = extract_server_args_by_test_name(adjusted_configs)
@@ -229,6 +234,7 @@ def assert_no_extra_worker_processes(
 ) -> None:
     """Ensure no extra worker PIDs remain after teardown."""
     from tests.dfx.reliability.helpers import list_remote_process_pids_by_pattern
+
     deadline = time.time() + timeout_sec
     while time.time() < deadline:
         current = set(list_remote_process_pids_by_pattern(worker_pattern))

@@ -576,12 +576,22 @@ async def async_request_video_sglang(
         if input.width and input.height:
             form.add_field("size", f"{input.width}x{input.height}")
 
-        if input.extra_body:
-            form.add_field("extra_body", json.dumps(input.extra_body))
+        for key, value in input.extra_body.items():
+            if value is None:
+                continue
+            if isinstance(value, (dict, list)):
+                value = json.dumps(value, separators=(",", ":"))
+            form.add_field(key, str(value))
         if input.num_frames:
             form.add_field("num_frames", str(input.num_frames))
         if input.fps:
             form.add_field("fps", str(input.fps))
+        if input.num_inference_steps:
+            form.add_field("num_inference_steps", str(input.num_inference_steps))
+        if input.seed is not None:
+            form.add_field("seed", str(input.seed))
+        if input.perf_dump_path is not None:
+            form.add_field("perf_dump_path", input.perf_dump_path)
 
         img_path = input.image_paths[0]
         if not os.path.exists(img_path):
@@ -629,6 +639,10 @@ async def async_request_video_sglang(
             payload["fps"] = input.fps
         if input.num_inference_steps:
             payload["num_inference_steps"] = input.num_inference_steps
+        if input.seed is not None:
+            payload["seed"] = input.seed
+        if input.perf_dump_path is not None:
+            payload["perf_dump_path"] = input.perf_dump_path
 
         payload.update(input.extra_body)
 

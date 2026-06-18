@@ -1,0 +1,124 @@
+[
+    {
+        "test_name": "test_sglang_wan22_i2v_single_device",
+        "description": "sglang: Wan2.2 I2V single-device baseline",
+        "server_type": "sglang",
+        "benchmark_endpoint": "/v1/videos",
+        "server_params": {
+            "model": "Wan-AI/Wan2.2-I2V-A14B-Diffusers",
+            "serve_args": {
+                "num-gpus": 1,
+                "dit-cpu-offload": false,
+                "text-encoder-cpu-offload": false,
+                "image-encoder-cpu-offload": false,
+                "vae-cpu-offload": false
+            }
+        },
+        "benchmark_params": [
+            {
+                "name": "832x480_frames81_steps4",
+                "dataset": "random",
+                "task": "i2v",
+                "num-prompts": 10,
+                "max-concurrency": 1,
+                "num-input-images": 1,
+                "seed": 42,
+                "enable-negative-prompt": true,
+                "random-request-config": [
+                    {
+                        "width": 832,
+                        "height": 480,
+                        "num_inference_steps": 4,
+                        "num_frames": 81,
+                        "fps": 16,
+                        "weight": 1
+                    }
+                ],
+                "baseline": {
+                    "throughput_qps": 0.001,
+                    "latency_p99": 1000.0,
+                    "peak_memory_mb_max": 400000,
+                    "peak_memory_mb_mean": 400000
+                }
+            }
+        ]
+    },
+    {
+        "test_name": "test_sglang_wan22_i2v_usp2_vae_patch2_hsdp_slicing",
+        "description": "sglang: Wan2.2 I2V SP=2/Ulysses=2 + HSDP + VAE parallel tiling + VAE slicing",
+        "server_type": "sglang",
+        "benchmark_endpoint": "/v1/videos",
+        "server_params": {
+            "model": "Wan-AI/Wan2.2-I2V-A14B-Diffusers",
+            "serve_args": {
+                "num-gpus": 2,
+                "sp-degree": 2,
+                "ulysses-degree": 2,
+                "ring-degree": 1,
+                "use-fsdp-inference": true,
+                "hsdp-shard-dim": 2,
+                "hsdp-replicate-dim": 1,
+                "vae-config.use-parallel-tiling": true,
+                "vae-slicing": true,
+                "dit-cpu-offload": false,
+                "text-encoder-cpu-offload": false,
+                "image-encoder-cpu-offload": false,
+                "vae-cpu-offload": false
+            }
+        },
+        "benchmark_params": [
+            {
+                "name": "832x480_frames81_steps4",
+                "dataset": "random",
+                "task": "i2v",
+                "num-prompts": 10,
+                "max-concurrency": 1,
+                "num-input-images": 1,
+                "seed": 42,
+                "enable-negative-prompt": true,
+                "random-request-config": [
+                    {
+                        "width": 832,
+                        "height": 480,
+                        "num_inference_steps": 4,
+                        "num_frames": 81,
+                        "fps": 16,
+                        "weight": 1
+                    }
+                ],
+                "baseline": {
+                    "throughput_qps": 0.001,
+                    "latency_p99": 1000.0,
+                    "peak_memory_mb_max": 400000,
+                    "peak_memory_mb_mean": 400000
+                }
+            },
+            {
+                "name": "1280x720_frames121_steps4",
+                "dataset": "random",
+                "task": "i2v",
+                "num-prompts": 10,
+                "max-concurrency": 1,
+                "num-input-images": 1,
+                "seed": 42,
+                "enable-negative-prompt": true,
+                "random-request-config": [
+                    {
+                        "width": 1280,
+                        "height": 720,
+                        "num_inference_steps": 4,
+                        "num_frames": 121,
+                        "fps": 16,
+                        "weight": 1
+                    }
+                ],
+                "baseline": {
+                    "throughput_qps": 0.001,
+                    "latency_p99": 1000.0,
+                    "peak_memory_mb_max": 400000,
+                    "peak_memory_mb_mean": 400000
+                }
+            }
+        ]
+    }
+]

@@ -1129,11 +1129,13 @@ def wait_for_service(base_url: str, timeout: int = 120) -> None:
 
 def _default_endpoint_for_task(task: str, request_backend: str = "vllm_omni") -> str:
     if request_backend == "sglang":
+        if task in {"t2v", "i2v", "ti2v"}:
+            return "/v1/videos"
         if task == "t2i":
             return "/v1/images/generations"
-        if task in {"i2i", "ti2i"}:
+        if task in {"i2i", "ti2i", "it2i"}:
             return "/v1/images/edits"
-    else: # vllm-omni
+    else:  # vllm-omni
         if task in {"t2v", "i2v", "ti2v"}:
             return "/v1/videos"
         if task in {"i2i", "ti2i", "it2i"}:

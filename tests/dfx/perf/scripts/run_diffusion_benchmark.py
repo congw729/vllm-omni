@@ -137,6 +137,7 @@ def _resolve_sglang_executable() -> str:
 
     return "sglang"
 
+
 # Single aggregated result file for the entire benchmark session.
 # Populated lazily after CONFIG_FILE_PATH is resolved.
 _SESSION_TIMESTAMP = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -550,8 +551,16 @@ def _to_parallelism_string(framework: str, serve_args_dict: dict[str, Any]) -> s
             "num-gpus",
             "sp-degree",
             "ulysses-degree",
+            "ring-degree",
             "enable-cfg-parallel",
+            "use-hsdp",
+            "hsdp-shard-size",
+            "hsdp-replicate-size",
+            "use-fsdp-inference",
+            "hsdp-shard-dim",
+            "hsdp-replicate-dim",
             "vae-config.use-parallel-tiling",
+            "vae-slicing",
         ]
         for key in keys:
             if key in serve_args_dict:
@@ -735,11 +744,7 @@ def run_benchmark(
     # SGLang don't return per-stage metrics in response. It dumps them to a directory instead.
     perf_dump_dir: Path | None = None
     if request_backend == "sglang":
-        perf_dump_dir = (
-            BENCHMARK_RESULT_DIR
-            / "sglang_perf_dumps"
-            / f"{test_name}_{endpoint_label}_{timestamp}"
-        )
+        perf_dump_dir = BENCHMARK_RESULT_DIR / "sglang_perf_dumps" / f"{test_name}_{endpoint_label}_{timestamp}"
         perf_dump_dir.mkdir(parents=True, exist_ok=True)
 
     exclude_keys = {"baseline", "dataset", "task", "name", "skip-performance-assertion"}
@@ -966,12 +971,14 @@ def assert_result(
 def _default_benchmark_endpoint_for_task(task: str, server_type: str = "vllm-omni") -> str:
     """Return the default client-side benchmark endpoint for a diffusion task."""
     if server_type == "sglang":
+        if task in {"t2v", "i2v", "ti2v"}:
+            return "/v1/videos"
         if task == "t2i":
             return "/v1/images/generations"
-        if task in {"i2i", "ti2i"}:
+        if task in {"i2i", "ti2i", "it2i"}:
             return "/v1/images/edits"
         raise ValueError(f"Unsupported task for sglang endpoint resolution: {task}")
-    else: # vllm-omni
+    else:  # vllm-omni
         if task in {"t2v", "i2v", "ti2v"}:
             return "/v1/videos"
         if task in {"t2i", "i2i", "ti2i"}:
