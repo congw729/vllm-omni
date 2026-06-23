@@ -1,0 +1,98 @@
+[
+    {
+        "test_name": "test_sglang_qwen3_omni_seed_tts",
+        "description": "sglang-omni: Qwen3-Omni chat+audio via /v1/chat/completions + random dataset (aligned with async_chunk)",
+        "server_type": "sglang-omni",
+        "server_params": {
+            "model": "Qwen/Qwen3-Omni-30B-A3B-Instruct",
+            "serve_args": {
+                "config": "tests/dfx/perf/deploy/sgl_qwen3_omni_moe.yaml"
+            }
+        },
+        "benchmark_params": [
+            {
+                "task": "voice_clone",
+                "eval_phase": "throughput",
+                "dataset_name": "random",
+                "backend": "openai-chat-sglang-omni",
+                "endpoint": "/v1/chat/completions",
+                "num_prompts": [
+                    4,
+                    16,
+                    32,
+                    64,
+                    128
+                ],
+                "max_concurrency": [
+                    1,
+                    4,
+                    8,
+                    16,
+                    32
+                ],
+                "random_input_len": 2500,
+                "random_output_len": 900,
+                "ignore_eos": true,
+                "extra_body": {
+                    "modalities": [
+                        "text",
+                        "audio"
+                    ]
+                },
+                "percentile-metrics": "ttft,tpot,itl,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "mean_ttft_ms": [
+                        135.4379,
+                        187.0896,
+                        400,
+                        435.675,
+                        724.6836
+                    ],
+                    "mean_e2el_ms": [
+                        17619.9851,
+                        34811.8335,
+                        43656.9501,
+                        56657.1548,
+                        85097.6016
+                    ],
+                    "mean_audio_rtf": [
+                        0.1279,
+                        0.2238,
+                        0.2735,
+                        0.3712,
+                        0.5634
+                    ]
+                }
+            },
+            {
+                "task": "voice_clone",
+                "eval_phase": "quality",
+                "enabled": false,
+                "dataset_name": "seed-tts",
+                "backend": "openai-chat-sglang-omni",
+                "endpoint": "/v1/chat/completions",
+                "dataset_path": "linyueqian/seed-tts-eval-subset",
+                "num_prompts": [
+                    200
+                ],
+                "max_concurrency": [
+                    4
+                ],
+                "seed_tts_locale": "en",
+                "seed_tts_wer_eval": true,
+                "extra_body": {
+                    "modalities": [
+                        "text",
+                        "audio"
+                    ]
+                },
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "mean_audio_rtf": [
+                        5.0
+                    ]
+                }
+            }
+        ]
+    }
+]
