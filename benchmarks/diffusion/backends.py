@@ -26,6 +26,8 @@ class RequestFuncInput:
     num_inference_steps: int | None = None
     seed: int | None = None
     fps: int | None = None
+    output_format: str | None = None
+    background: str | None = None
     timestamp: float | None = None
     slo_ms: float | None = None
     extra_body: dict[str, Any] = field(default_factory=dict)
@@ -71,6 +73,13 @@ async def async_request_image_edits(
     output.start_time = time.perf_counter()
 
     extra_body = dict(input.extra_body)
+    if input.output_format is not None:
+        extra_body["output_format"] = input.output_format
+    if input.background is not None:
+        extra_body["background"] = input.background
+    if "qwen-image-layered" in input.model.lower():
+        extra_body.setdefault("output_format", "png")
+        extra_body.setdefault("background", "transparent")
     width = input.width or extra_body.get("width") or 1024
     height = input.height or extra_body.get("height") or 1024
     edits_url = input.api_url
@@ -101,6 +110,10 @@ async def async_request_image_edits(
         form.add_field("sys_type", str(extra_body["sys_type"]))
     if extra_body.get("system_prompt") is not None:
         form.add_field("system_prompt", str(extra_body["system_prompt"]))
+    if extra_body.get("output_format") is not None:
+        form.add_field("output_format", str(extra_body["output_format"]))
+    if extra_body.get("background") is not None:
+        form.add_field("background", str(extra_body["background"]))
 
     bot_task = extra_body.get("bot_task")
     if bot_task is None and input.default_bot_task is not None:
@@ -458,6 +471,14 @@ async def async_request_image_sglang(
 ) -> RequestFuncOutput:
     output = RequestFuncOutput()
     output.start_time = time.perf_counter()
+    extra_body = dict(input.extra_body)
+    if input.output_format is not None:
+        extra_body["output_format"] = input.output_format
+    if input.background is not None:
+        extra_body["background"] = input.background
+    if "qwen-image-layered" in input.model.lower():
+        extra_body.setdefault("output_format", "png")
+        extra_body.setdefault("background", "transparent")
 
     if input.image_paths and len(input.image_paths) > 0:
         form = aiohttp.FormData()
@@ -471,7 +492,7 @@ async def async_request_image_sglang(
         if input.num_inference_steps:
             form.add_field("num_inference_steps", str(input.num_inference_steps))
 
-        for key, value in input.extra_body.items():
+        for key, value in extra_body.items():
             form.add_field(key, str(value))
         if input.perf_dump_path is not None:
             form.add_field("perf_dump_path", input.perf_dump_path)
@@ -521,7 +542,7 @@ async def async_request_image_sglang(
         if input.perf_dump_path is not None:
             payload["perf_dump_path"] = input.perf_dump_path
 
-        payload.update(input.extra_body)
+        payload.update(extra_body)
 
         try:
             async with session.post(input.api_url, json=payload) as response:

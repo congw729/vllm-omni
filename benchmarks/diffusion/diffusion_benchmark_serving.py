@@ -112,6 +112,20 @@ _STAGE_METRICS_ENDPOINTS = {"/v1/chat/completions"}
 _RETURN_STAGE_METRICS_FIELD = "return_stage_metrics"
 
 
+def _parse_extra_body(raw: str | dict[str, Any] | None) -> dict[str, Any]:
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return dict(raw)
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"--extra-body must be a JSON object: {e}") from e
+    if not isinstance(parsed, dict):
+        raise ValueError("--extra-body must be a JSON object")
+    return parsed
+
+
 class BaseDataset(ABC):
     def __init__(self, args, api_url: str, model: str):
         self.args = args
@@ -673,8 +687,21 @@ class CustomDataset(BaseDataset):
         height = item.get("height", self.args.height)
         num_inference_steps = item.get("num_inference_steps", self.args.num_inference_steps)
         seed = item.get("seed", self.args.seed)
-        reserved_keys = {"prompt", "width", "height", "num_inference_steps", "seed", "image_paths", "image_urls"}
-        extra_body = {k: v for k, v in item.items() if k not in reserved_keys}
+        output_format = item.get("output_format", self.args.output_format)
+        background = item.get("background", self.args.background)
+        reserved_keys = {
+            "prompt",
+            "width",
+            "height",
+            "num_inference_steps",
+            "seed",
+            "output_format",
+            "background",
+            "image_paths",
+            "image_urls",
+        }
+        extra_body = _parse_extra_body(getattr(self.args, "extra_body", None))
+        extra_body.update({k: v for k, v in item.items() if k not in reserved_keys})
 
         # Handle image paths/URLs
         image_paths = self._resolve_image_paths(item)
@@ -689,6 +716,8 @@ class CustomDataset(BaseDataset):
             width=width,
             height=height,
             num_inference_steps=num_inference_steps,
+            output_format=output_format,
+            background=background,
         )
 
     def get_requests(self) -> list[RequestFuncInput]:
@@ -743,7 +772,7 @@ class RandomDataset(BaseDataset):
         return self.num_prompts
 
     def __getitem__(self, idx: int) -> RequestFuncInput:
-        extra_body = {}
+        extra_body = _parse_extra_body(getattr(self.args, "extra_body", None))
         if self.enable_negative_prompt:
             extra_body["negative_prompt"] = f"Negative prompt {idx} for benchmarking diffusion models"
 
@@ -753,6 +782,8 @@ class RandomDataset(BaseDataset):
             "num_frames": self.args.num_frames,
             "num_inference_steps": self.args.num_inference_steps,
             "fps": self.args.fps,
+            "output_format": self.args.output_format,
+            "background": self.args.background,
         }
         if self._sampled_requests:
             profile = self._sampled_requests[idx]
@@ -1425,6 +1456,18 @@ if __name__ == "__main__":
     parser.add_argument("--height", type=int, default=None, help="Image/Video height.")
     parser.add_argument("--num-frames", type=int, default=None, help="Number of frames (for video).")
     parser.add_argument(
+        "--output-format",
+        type=str,
+        default=None,
+        help="Requested image output format for image APIs, e.g. png, jpeg, or webp.",
+    )
+    parser.add_argument(
+        "--background",
+        type=str,
+        default=None,
+        help="Requested image background handling, e.g. transparent, opaque, or auto.",
+    )
+    parser.add_argument(
         "--num-inference-steps",
         type=int,
         default=50,
@@ -1475,6 +1518,15 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Generate negative prompts when using the random dataset.",
+    )
+    parser.add_argument(
+        "--extra-body",
+        type=str,
+        default=None,
+        help=(
+            "JSON object merged into each request body/form. "
+            "Useful for backend-specific extensions such as SGLang output_format=png."
+        ),
     )
     parser.add_argument(
         "--random-request-config",

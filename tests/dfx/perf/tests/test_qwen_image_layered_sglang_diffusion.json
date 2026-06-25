@@ -1,0 +1,37 @@
+[
+    {
+        "test_name": "test_sglang_qwen_image_layered_single_device",
+        "description": "sglang: Qwen-Image-Layered single-device baseline",
+        "server_type": "sglang",
+        "server_params": {
+            "model": "Qwen/Qwen-Image-Layered",
+            "serve_args": {
+                "num-gpus": 1,
+                "dit-cpu-offload": false,
+                "text-encoder-cpu-offload": false,
+                "vae-cpu-offload": false
+            }
+        },
+        "benchmark_params": [
+            {
+                "name": "640x640_steps20_i2i",
+                "dataset": "random",
+                "task": "i2i",
+                "width": 640,
+                "height": 640,
+                "num-inference-steps": 20,
+                "num-prompts": 10,
+                "max-concurrency": 1,
+                "enable-negative-prompt": true,
+                "output-format": "png",
+                "background": "transparent",
+                "baseline": {
+                    "throughput_qps": 0.001,
+                    "latency_p99": 1000.0,
+                    "peak_memory_mb_max": 400000,
+                    "peak_memory_mb_mean": 400000
+                }
+            }
+        ]
+    }
+]
