@@ -307,10 +307,11 @@ def get_samples(args, tokenizer):
         return input_requests
 
     if is_seed_tts:
-        if args.backend not in ("openai-audio-speech", "openai-chat-omni"):
+        if args.backend not in ("openai-audio-speech", "openai-chat-omni", "openai-chat-sglang-omni"):
             raise ValueError(
-                "Seed-TTS requires --backend openai-audio-speech (POST /v1/audio/speech) or "
-                "--backend openai-chat-omni (POST /v1/chat/completions with ref_audio/ref_text). "
+                "Seed-TTS requires --backend openai-audio-speech (POST /v1/audio/speech), "
+                "--backend openai-chat-omni (vLLM-Omni chat completions), or "
+                "--backend openai-chat-sglang-omni (SGLang-Omni chat completions). "
                 f"Got backend={args.backend!r}."
             )
         repo_id = getattr(args, "dataset_path", None) or getattr(args, "hf_name", None)
@@ -1209,9 +1210,45 @@ async def async_request_openai_audio_speech(
     return output
 
 
+async def async_request_openai_chat_sglang_omni_completions(
+    request_func_input: RequestFuncInput,
+    session: aiohttp.ClientSession,
+    pbar: tqdm | None = None,
+    mm_position: Literal["first", "last"] = "last",
+) -> MixRequestFuncOutput:
+    """SGLang-Omni chat benchmark client; reuses vLLM-Omni streaming parser."""
+    perf_dump_path = getattr(request_func_input, "perf_dump_path", None)
+    if perf_dump_path:
+        body = dict(request_func_input.extra_body or {})
+        body["perf_dump_path"] = perf_dump_path
+        request_func_input.extra_body = body
+
+    output = await async_request_openai_chat_omni_completions(
+        request_func_input,
+        session,
+        pbar,
+        mm_position=mm_position,
+    )
+
+    if output.success and perf_dump_path:
+        from pathlib import Path
+
+        from benchmarks.diffusion.sglang_perf import load_sglang_perf_dump
+
+        stages = load_sglang_perf_dump(Path(perf_dump_path))
+        if stages:
+            output.stage_metrics = stages
+
+    return output
+
+
 ASYNC_REQUEST_FUNCS["openai-chat-omni"] = async_request_openai_chat_omni_completions
 if "openai-chat-omni" not in OPENAI_COMPATIBLE_BACKENDS:
     OPENAI_COMPATIBLE_BACKENDS.append("openai-chat-omni")
+
+ASYNC_REQUEST_FUNCS["openai-chat-sglang-omni"] = async_request_openai_chat_sglang_omni_completions
+if "openai-chat-sglang-omni" not in OPENAI_COMPATIBLE_BACKENDS:
+    OPENAI_COMPATIBLE_BACKENDS.append("openai-chat-sglang-omni")
 
 ASYNC_REQUEST_FUNCS["openai-audio-speech"] = async_request_openai_audio_speech
 if "openai-audio-speech" not in OPENAI_COMPATIBLE_BACKENDS:
@@ -1416,6 +1453,11 @@ async def benchmark(
 
     benchmark_start_time = time.perf_counter()
     tasks: list[asyncio.Task] = []
+    perf_dump_dir = os.environ.get("VLLM_OMNI_BENCH_PERF_DUMP_DIR")
+    use_sglang_perf_dumps = endpoint_type == "openai-chat-sglang-omni" and perf_dump_dir
+    if use_sglang_perf_dumps:
+        os.makedirs(perf_dump_dir, exist_ok=True)
+    req_counter = 0
 
     rps_change_events = []
     last_int_rps = -1
@@ -1472,6 +1514,10 @@ async def benchmark(
         )
         _attach_daily_omni_to_request_func_input(request, request_func_input)
         _attach_seed_tts_to_request_func_input(request, request_func_input)
+        if use_sglang_perf_dumps:
+            dump_path = os.path.join(os.path.abspath(perf_dump_dir), f"req_{req_counter:04d}.json")
+            req_counter += 1
+            setattr(request_func_input, "perf_dump_path", dump_path)
         tasks.append(
             asyncio.create_task(limited_request_func(request_func_input=request_func_input, session=session, pbar=pbar))
         )

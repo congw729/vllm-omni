@@ -365,13 +365,71 @@ def run_benchmark(
     max_concurrency: Any | None = None,
     random_input_len: Any | None = None,
     random_output_len: Any | None = None,
+    server_cfg: dict[str, Any] | None = None,
+    perf_dump_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     """Run one ``vllm bench serve --omni`` iteration and return parsed metrics.
 
     After ``vllm bench`` writes the JSON, ``result["baseline"]`` holds the resolved per-metric thresholds
     (when ``baseline_config`` is provided). If the benchmark exits without writing a result file,
     ``result_omni_template.json`` is used as a fallback.
+
+    When ``perf_dump_dir`` is set (SGLang-Omni cross-framework runs), per-request dumps are written
+    under that directory and stage aggregates are merged into the saved result JSON.
     """
+    server_cfg = server_cfg or {}
+    server_type = str(server_cfg.get("server_type", "vllm-omni"))
+    request_backend = "sglang_omni" if server_type == "sglang-omni" else "vllm_omni"
+    perf_dump_path: Path | None = None
+    if perf_dump_dir is not None:
+        perf_dump_path = Path(perf_dump_dir)
+        perf_dump_path.mkdir(parents=True, exist_ok=True)
+
+    prev_perf_dump_dir = os.environ.get("VLLM_OMNI_BENCH_PERF_DUMP_DIR")
+    if perf_dump_path is not None:
+        os.environ["VLLM_OMNI_BENCH_PERF_DUMP_DIR"] = str(perf_dump_path.resolve())
+    try:
+        return _run_benchmark_impl(
+            args=args,
+            test_name=test_name,
+            flow=flow,
+            dataset_name=dataset_name,
+            num_prompt=num_prompt,
+            baseline_config=baseline_config,
+            sweep_index=sweep_index,
+            request_rate=request_rate,
+            max_concurrency=max_concurrency,
+            random_input_len=random_input_len,
+            random_output_len=random_output_len,
+            server_type=server_type,
+            request_backend=request_backend,
+            perf_dump_path=perf_dump_path,
+        )
+    finally:
+        if perf_dump_path is not None:
+            if prev_perf_dump_dir is None:
+                os.environ.pop("VLLM_OMNI_BENCH_PERF_DUMP_DIR", None)
+            else:
+                os.environ["VLLM_OMNI_BENCH_PERF_DUMP_DIR"] = prev_perf_dump_dir
+
+
+def _run_benchmark_impl(
+    *,
+    args: list[str],
+    test_name: str,
+    flow: Any,
+    dataset_name: str,
+    num_prompt: int,
+    baseline_config: dict[str, Any] | None,
+    sweep_index: int | None,
+    request_rate: Any | None,
+    max_concurrency: Any | None,
+    random_input_len: Any | None,
+    random_output_len: Any | None,
+    server_type: str,
+    request_backend: str,
+    perf_dump_path: Path | None,
+) -> dict[str, Any]:
     current_dt = datetime.now().strftime("%Y%m%d-%H%M%S")
     ri = _safe_filename_token(random_input_len)
     ro = _safe_filename_token(random_output_len)
@@ -431,6 +489,14 @@ def run_benchmark(
     else:
         with open(result_path, encoding="utf-8") as f:
             result = json.load(f)
+
+    if perf_dump_path is not None:
+        from benchmarks.diffusion.sglang_perf import merge_sglang_perf_dumps_into_metrics
+
+        result = merge_sglang_perf_dumps_into_metrics(perf_dump_path, result)
+
+    result["framework"] = server_type
+    result["request_backend"] = request_backend
 
     if baseline_config:
         result["baseline"] = _baseline_thresholds_for_step(

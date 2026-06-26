@@ -217,7 +217,14 @@ class OmniBenchmarkServingSubcommand(OmniBenchmarkSubcommandBase):
                 if extra:
                     action.choices = list(action.choices) + extra
             if action.dest == "backend" and action.choices is not None:
-                extra = [c for c in ("openai-image-edits-omni",) if c not in action.choices]
+                extra = [
+                    c
+                    for c in (
+                        "openai-image-edits-omni",
+                        "openai-chat-sglang-omni",
+                    )
+                    if c not in action.choices
+                ]
                 if extra:
                     action.choices = list(action.choices) + extra
         _extend_omni_dataset_name_choices(parser)
