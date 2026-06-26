@@ -1,0 +1,347 @@
+[
+    {
+        "test_name": "test_sglang_qwen3_tts_base_seed_tts",
+        "description": "sglang-omni: Qwen3-TTS Base voice cloning via /v1/audio/speech + Seed-TTS dataset",
+        "server_type": "sglang-omni",
+        "server_params": {
+            "model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+        },
+        "benchmark_params": [
+            {
+                "task": "voice_clone",
+                "eval_phase": "latency",
+                "dataset_name": "seed-tts",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "linyueqian/seed-tts-eval-subset",
+                "num_prompts": [
+                    20
+                ],
+                "max_concurrency": [
+                    1
+                ],
+                "seed_tts_locale": "en",
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "median_audio_ttfp_ms": [
+                        2620.8459
+                    ],
+                    "median_audio_rtf": [
+                        0.5697
+                    ]
+                }
+            },
+            {
+                "task": "voice_clone",
+                "eval_phase": "throughput",
+                "dataset_name": "seed-tts",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "linyueqian/seed-tts-eval-subset",
+                "num_prompts": [
+                    80,
+                    128,
+                    128
+                ],
+                "max_concurrency": [
+                    8,
+                    16,
+                    64
+                ],
+                "seed_tts_locale": "en",
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "median_audio_ttfp_ms": [
+                        3235.4992,
+                        3955.7615,
+                        13825.423
+                    ],
+                    "median_audio_rtf": [
+                        0.7702,
+                        0.941,
+                        3.2227
+                    ],
+                    "audio_throughput": [
+                        10.1117,
+                        16.4901,
+                        17.0987
+                    ]
+                }
+            },
+            {
+                "task": "voice_clone",
+                "eval_phase": "quality",
+                "enabled": false,
+                "dataset_name": "seed-tts",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "linyueqian/seed-tts-eval-subset",
+                "num_prompts": [
+                    200
+                ],
+                "max_concurrency": [
+                    4
+                ],
+                "seed_tts_locale": "en",
+                "seed_tts_wer_eval": true,
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "mean_audio_rtf": [
+                        0.45
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "test_name": "test_sglang_qwen3_tts_customvoice",
+        "description": "sglang-omni: Qwen3-TTS CustomVoice default voice and voice design via /v1/audio/speech",
+        "server_type": "sglang-omni",
+        "server_params": {
+            "model": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
+        },
+        "benchmark_params": [
+            {
+                "task": "default_voice",
+                "eval_phase": "latency",
+                "dataset_name": "seed-tts-text",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "benchmarks/build_dataset/seed_tts_smoke",
+                "num_prompts": [
+                    20
+                ],
+                "max_concurrency": [
+                    1
+                ],
+                "seed_tts_locale": "en",
+                "extra_body": {
+                    "voice": "Vivian",
+                    "language": "English",
+                    "task_type": "CustomVoice"
+                },
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "median_audio_ttfp_ms": [
+                        3101.7391
+                    ],
+                    "median_audio_rtf": [
+                        0.5622
+                    ]
+                }
+            },
+            {
+                "task": "default_voice",
+                "eval_phase": "throughput",
+                "dataset_name": "seed-tts-text",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "benchmarks/build_dataset/seed_tts_smoke",
+                "num_prompts": [
+                    80,
+                    128,
+                    128
+                ],
+                "max_concurrency": [
+                    8,
+                    16,
+                    64
+                ],
+                "seed_tts_locale": "en",
+                "extra_body": {
+                    "voice": "Vivian",
+                    "language": "English",
+                    "task_type": "CustomVoice"
+                },
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "median_audio_ttfp_ms": [
+                        3663.5686,
+                        4309.0422,
+                        16770.2334
+                    ],
+                    "median_audio_rtf": [
+                        0.6805,
+                        0.7883,
+                        2.8231
+                    ],
+                    "audio_throughput": [
+                        11.2135,
+                        19.6956,
+                        19.3537
+                    ]
+                }
+            },
+            {
+                "task": "default_voice",
+                "eval_phase": "quality",
+                "enabled": false,
+                "dataset_name": "seed-tts-text",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "benchmarks/build_dataset/seed_tts_smoke",
+                "num_prompts": [
+                    200
+                ],
+                "max_concurrency": [
+                    4
+                ],
+                "seed_tts_locale": "en",
+                "extra_body": {
+                    "voice": "Vivian",
+                    "language": "English",
+                    "task_type": "CustomVoice"
+                },
+                "seed_tts_wer_eval": true,
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "mean_audio_rtf": [
+                        0.35
+                    ]
+                }
+            },
+            {
+                "task": "default_voice",
+                "eval_phase": "stress",
+                "dataset_name": "seed-tts-text",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "benchmarks/build_dataset/seed_tts_smoke",
+                "num_prompts": [
+                    100
+                ],
+                "request_rate": [
+                    2.0
+                ],
+                "seed_tts_locale": "en",
+                "extra_body": {
+                    "voice": "Vivian",
+                    "language": "English",
+                    "task_type": "CustomVoice"
+                },
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "median_audio_ttfp_ms": [
+                        3745.3487
+                    ],
+                    "median_audio_rtf": [
+                        0.6795
+                    ],
+                    "audio_throughput": [
+                        10.3678
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "test_name": "test_sglang_qwen3_tts_voicedesign",
+        "description": "sglang-omni: Qwen3-TTS VoiceDesign via /v1/audio/speech",
+        "server_type": "sglang-omni",
+        "server_params": {
+            "model": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
+        },
+        "benchmark_params": [
+            {
+                "task": "voice_design",
+                "eval_phase": "latency",
+                "dataset_name": "seed-tts-design",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "benchmarks/build_dataset/seed_tts_design",
+                "num_prompts": [
+                    20
+                ],
+                "max_concurrency": [
+                    1
+                ],
+                "seed_tts_locale": "en",
+                "extra_body": {
+                    "task_type": "VoiceDesign",
+                    "language": "English"
+                },
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "median_audio_ttfp_ms": [
+                        2323.8776
+                    ],
+                    "median_audio_rtf": [
+                        0.5627
+                    ]
+                }
+            },
+            {
+                "task": "voice_design",
+                "eval_phase": "throughput",
+                "dataset_name": "seed-tts-design",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "benchmarks/build_dataset/seed_tts_design",
+                "num_prompts": [
+                    80,
+                    128,
+                    128
+                ],
+                "max_concurrency": [
+                    8,
+                    16,
+                    64
+                ],
+                "seed_tts_locale": "en",
+                "extra_body": {
+                    "task_type": "VoiceDesign",
+                    "language": "English"
+                },
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "median_audio_ttfp_ms": [
+                        3047.759,
+                        3520.6286,
+                        13750.2353
+                    ],
+                    "median_audio_rtf": [
+                        0.7021,
+                        0.8242,
+                        2.9964
+                    ],
+                    "audio_throughput": [
+                        10.8976,
+                        17.7592,
+                        18.9468
+                    ]
+                }
+            },
+            {
+                "task": "voice_design",
+                "eval_phase": "stress",
+                "dataset_name": "seed-tts-design",
+                "backend": "openai-audio-speech",
+                "endpoint": "/v1/audio/speech",
+                "dataset_path": "benchmarks/build_dataset/seed_tts_design",
+                "num_prompts": [
+                    100
+                ],
+                "request_rate": [
+                    2.0
+                ],
+                "seed_tts_locale": "en",
+                "extra_body": {
+                    "task_type": "VoiceDesign",
+                    "language": "English"
+                },
+                "percentile-metrics": "ttft,e2el,audio_rtf,audio_ttfp,audio_duration",
+                "baseline": {
+                    "median_audio_ttfp_ms": [
+                        3008.0177
+                    ],
+                    "median_audio_rtf": [
+                        0.6775
+                    ],
+                    "audio_throughput": [
+                        8.2905
+                    ]
+                }
+            }
+        ]
+    }
+]
