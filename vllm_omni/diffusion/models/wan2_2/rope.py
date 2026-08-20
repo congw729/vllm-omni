@@ -183,16 +183,16 @@ class WanS2VRotaryPosEmbed(torch.nn.Module):
                         h_sam = torch.linspace(int(h_o), int(t_h + h_o) - 1, seq_h_int, device=device).long()
                         w_sam = torch.linspace(int(w_o), int(t_w + w_o) - 1, seq_w_int, device=device).long()
 
-                        freqs_0 = freqs_split[0][f_sam] if f_o >= 0 else freqs_split[0][f_sam].conj()
+                        freqs_0 = torch.index_select(freqs_split[0] if f_o >= 0 else freqs_split[0].conj(), 0, f_sam)
                         freqs_0 = freqs_0.view(seq_f_int, 1, 1, -1)
 
                         freqs_i = torch.cat(
                             [
                                 freqs_0.expand(seq_f_int, seq_h_int, seq_w_int, -1),
-                                freqs_split[1][h_sam]
+                                torch.index_select(freqs_split[1], 0, h_sam)
                                 .view(1, seq_h_int, 1, -1)
                                 .expand(seq_f_int, seq_h_int, seq_w_int, -1),
-                                freqs_split[2][w_sam]
+                                torch.index_select(freqs_split[2], 0, w_sam)
                                 .view(1, 1, seq_w_int, -1)
                                 .expand(seq_f_int, seq_h_int, seq_w_int, -1),
                             ],
