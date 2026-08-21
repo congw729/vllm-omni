@@ -96,9 +96,9 @@ Feel free to ask questions, provide feedbacks and discuss with fellow users of v
 
 <a href="https://www.star-history.com/?repos=vllm-project%2Fvllm-omni&type=date&legend=top-left">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=vllm-project/vllm-omni&type=date&theme=dark&legend=top-left&sealed_token=YosRwXCLgU-t-aDKUqbEZsAbZUrLZuvCpnqhCF1S7EZH4lP-RPjrvwKho2Een0dG-mBaZhD6jjyZs2Wu7taedUYGCGcdG5IdfzANWO9YHBNUZSH66u31eb0LhVtIPQp29XKRBf7s9crq5_3IXKosc42uf5GUq5jaAQyKPglvVeLyxuMvQTYFv13LEn9B" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=vllm-project/vllm-omni&type=date&legend=top-left&sealed_token=YosRwXCLgU-t-aDKUqbEZsAbZUrLZuvCpnqhCF1S7EZH4lP-RPjrvwKho2Een0dG-mBaZhD6jjyZs2Wu7taedUYGCGcdG5IdfzANWO9YHBNUZSH66u31eb0LhVtIPQp29XKRBf7s9crq5_3IXKosc42uf5GUq5jaAQyKPglvVeLyxuMvQTYFv13LEn9B" />
-    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=vllm-project/vllm-omni&type=date&legend=top-left&sealed_token=YosRwXCLgU-t-aDKUqbEZsAbZUrLZuvCpnqhCF1S7EZH4lP-RPjrvwKho2Een0dG-mBaZhD6jjyZs2Wu7taedUYGCGcdG5IdfzANWO9YHBNUZSH66u31eb0LhVtIPQp29XKRBf7s9crq5_3IXKosc42uf5GUq5jaAQyKPglvVeLyxuMvQTYFv13LEn9B" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=vllm-project/vllm-omni&type=date&theme=dark&legend=top-left&sealed_token=ExgLDZJoQEg27Zfhhut2LqN0GYO6Fw2PWLwPE6JYBUp2BgM3hmsYlwaIVopnUEfbRXidQ4nisumrTdKYydiKhy1SZXipw47qY2_tiUDhCpsPXeXtPuEVKVzBwKs3pw0tiHsJgtSfwXx5yjHXck0Y2SblzFWeJYCkTe1WLGTbUAOIETjXXQJjyCGZvKz5" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=vllm-project/vllm-omni&type=date&legend=top-left&sealed_token=ExgLDZJoQEg27Zfhhut2LqN0GYO6Fw2PWLwPE6JYBUp2BgM3hmsYlwaIVopnUEfbRXidQ4nisumrTdKYydiKhy1SZXipw47qY2_tiUDhCpsPXeXtPuEVKVzBwKs3pw0tiHsJgtSfwXx5yjHXck0Y2SblzFWeJYCkTe1WLGTbUAOIETjXXQJjyCGZvKz5" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=vllm-project/vllm-omni&type=date&legend=top-left&sealed_token=ExgLDZJoQEg27Zfhhut2LqN0GYO6Fw2PWLwPE6JYBUp2BgM3hmsYlwaIVopnUEfbRXidQ4nisumrTdKYydiKhy1SZXipw47qY2_tiUDhCpsPXeXtPuEVKVzBwKs3pw0tiHsJgtSfwXx5yjHXck0Y2SblzFWeJYCkTe1WLGTbUAOIETjXXQJjyCGZvKz5" />
   </picture>
 </a>
 
