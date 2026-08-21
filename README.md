@@ -93,7 +93,9 @@ Feel free to ask questions, provide feedbacks and discuss with fellow users of v
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=vllm-project/vllm-omni&type=date&legend=top-left)](https://www.star-history.com/#vllm-project/vllm-omni&type=date&legend=top-left)
+> [!NOTE]
+> The Star History chart is temporarily unavailable due to
+> [GitHub's Stargazer API restrictions](https://star-history.com/blog/github-stargazer-api-restriction).
 
 ## License
 
