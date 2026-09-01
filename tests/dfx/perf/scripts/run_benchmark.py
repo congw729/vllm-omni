@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 
 from tests.dfx.conftest import (
+    create_paired_benchmark_pytest_params,
     create_paired_omni_benchmark_pytest_params,
     create_test_parameter_mapping,
     get_benchmark_params_for_server,
@@ -21,7 +22,7 @@ from tests.dfx.conftest import (
     load_benchmark_configs,
     run_benchmark,
 )
-from tests.helpers.runtime import OmniServer
+from tests.dfx.perf.scripts.sglang_omni_server import SglangOmniServer, sglang_server_entries
 
 # Optional JSON field ``mark`` is applied as pytest marks via
 # ``create_paired_omni_benchmark_pytest_params`` (e.g. ``"mark": [{"hardware_marks":
@@ -59,7 +60,34 @@ else:
 
 DEPLOY_CONFIGS_DIR = Path(__file__).parent.parent / "deploy"
 server_to_benchmark_mapping = create_test_parameter_mapping(BENCHMARK_CONFIGS)
-paired_benchmark_params = create_paired_omni_benchmark_pytest_params(BENCHMARK_CONFIGS, DEPLOY_CONFIGS_DIR)
+_server_types = {config.get("server_type", "vllm-omni") for config in BENCHMARK_CONFIGS}
+if len(_server_types) != 1:
+    raise ValueError(f"A benchmark config file must use one server type, got: {sorted(_server_types)}")
+SERVER_TYPE = next(iter(_server_types), "vllm-omni")
+if SERVER_TYPE == "sglang-omni":
+
+    def _sglang_marks(config: dict[str, Any]) -> list[pytest.MarkDecorator]:
+        marks: list[pytest.MarkDecorator] = []
+        for item in config.get("mark", []):
+            if isinstance(item, str):
+                marks.append(getattr(pytest.mark, item))
+                continue
+            hardware = item.get("hardware_marks", {})
+            for platform, resource in hardware.get("res", {}).items():
+                marks.extend((getattr(pytest.mark, platform), getattr(pytest.mark, resource)))
+            cards = hardware.get("num_cards")
+            if isinstance(cards, int):
+                marks.append(getattr(pytest.mark, f"cards_{cards}"))
+        return marks
+
+    _server_entries = sglang_server_entries(BENCHMARK_CONFIGS)
+    paired_benchmark_params = create_paired_benchmark_pytest_params(
+        _server_entries,
+        {name: get_benchmark_params_for_server(name, server_to_benchmark_mapping) for _, name in _server_entries},
+        {config["test_name"]: _sglang_marks(config) for config in BENCHMARK_CONFIGS},
+    )
+else:
+    paired_benchmark_params = create_paired_omni_benchmark_pytest_params(BENCHMARK_CONFIGS, DEPLOY_CONFIGS_DIR)
 
 _omni_server_lock = threading.Lock()
 
@@ -95,6 +123,8 @@ class _SingleActiveContext:
 
 @contextmanager
 def _start_omni_server(server_param):
+    from tests.helpers.runtime import OmniServer
+
     test_name, model, stage_config_path, stage_overrides, extra_cli_args, use_omni = server_param
 
     print(f"Starting OmniServer with test: {test_name}, model: {model}")
@@ -135,6 +165,9 @@ def omni_server_context():
 
 @pytest.fixture
 def omni_server(request, omni_server_context):
+    if SERVER_TYPE == "sglang-omni":
+        key = json.dumps(request.param, sort_keys=True)
+        return omni_server_context.acquire(key, lambda: SglangOmniServer(request.param))
     return omni_server_context.acquire(request.param, lambda: _start_omni_server(request.param))
 
 
@@ -206,7 +239,7 @@ def test_performance_benchmark(omni_server, benchmark_params):
     print(f"Running benchmark for model: {model}")
     print(f"Benchmark parameters: {benchmark_params}")
 
-    resource_label = get_runtime_resource_label()
+    resource_label = omni_server.resource_label if SERVER_TYPE == "sglang-omni" else get_runtime_resource_label()
 
     def to_list(value, default=None):
         if value is None:
