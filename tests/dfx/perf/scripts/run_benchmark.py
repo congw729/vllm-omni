@@ -4,9 +4,12 @@
 import json
 import math
 import os
+import subprocess
+import sys
 import threading
 from collections.abc import Callable
 from contextlib import AbstractContextManager, ExitStack, contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +33,9 @@ from tests.dfx.perf.scripts.sglang_omni_server import SglangOmniServer, sglang_s
 
 
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
+
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_OMNI_BENCHMARK_SCRIPT = _REPO_ROOT / "benchmarks" / "omni" / "omni_benchmark_serving.py"
 
 
 def _get_config_file_from_argv() -> str | None:
@@ -221,6 +227,40 @@ def assert_result(result, params, num_prompt) -> None:
         ), f"Not every duplex session emitted {expected_audio_turns} audio turns"
 
 
+def _run_sglang_omni_benchmark(
+    *,
+    args: list[str],
+    test_name: str,
+    flow: Any,
+    dataset_name: str,
+    num_prompt: int,
+    **_: Any,
+) -> dict[str, Any]:
+    """Drive SGLang-Omni without requiring a ``vllm`` console script on PATH."""
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    result_dir = Path(os.environ.get("BENCHMARK_DIR", "tests/dfx/perf/results"))
+    result_dir.mkdir(parents=True, exist_ok=True)
+    result_path = result_dir / f"result_{test_name}_{dataset_name}_{flow}_{num_prompt}_{timestamp}.json"
+    command = [
+        sys.executable,
+        str(_OMNI_BENCHMARK_SCRIPT),
+        "--request-backend",
+        "sglang_omni",
+        "--output-file",
+        str(result_path),
+        *args,
+    ]
+    subprocess.run(command, cwd=_REPO_ROOT, check=True)
+    with result_path.open(encoding="utf-8") as result_file:
+        return json.load(result_file)
+
+
+def _dispatch_run_benchmark(**kwargs: Any) -> dict[str, Any]:
+    if SERVER_TYPE == "sglang-omni":
+        return _run_sglang_omni_benchmark(**kwargs)
+    return run_benchmark(**kwargs)
+
+
 @pytest.mark.benchmark
 @pytest.mark.parametrize(
     "omni_server,benchmark_params",
@@ -262,7 +302,7 @@ def test_performance_benchmark(omni_server, benchmark_params):
     elif len(num_prompt_list) != max_len and max_len > 0:
         raise ValueError("The number of prompts does not match the QPS or max_concurrency")
 
-    args = ["--host", host, "--port", str(port)]
+    args = ["--host", host, "--port", str(port), "--model", model]
     exclude_keys = {
         "request_rate",
         "baseline",
@@ -300,7 +340,7 @@ def test_performance_benchmark(omni_server, benchmark_params):
     # QPS / request-rate sweep
     for sweep_index, (qps, num_prompt) in enumerate(zip(qps_list, num_prompt_list)):
         args = args + ["--request-rate", str(qps), "--num-prompts", str(num_prompt)]
-        result = run_benchmark(
+        result = _dispatch_run_benchmark(
             args=args,
             test_name=test_name,
             flow=qps,
@@ -317,7 +357,7 @@ def test_performance_benchmark(omni_server, benchmark_params):
     # concurrency test
     for sweep_index, (concurrency, num_prompt) in enumerate(zip(max_concurrency_list, num_prompt_list)):
         args = args + ["--max-concurrency", str(concurrency), "--num-prompts", str(num_prompt), "--request-rate", "inf"]
-        result = run_benchmark(
+        result = _dispatch_run_benchmark(
             args=args,
             test_name=test_name,
             flow=concurrency,
