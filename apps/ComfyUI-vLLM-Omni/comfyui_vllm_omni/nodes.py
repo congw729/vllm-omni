@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM-Omni project
+
 from typing import Literal
 
 import torch
@@ -778,6 +781,7 @@ class VLLMOmniMiniMaxH3Params:
                     "FLOAT",
                     {"default": 12.0, "min": 0.0, "max": 100.0, "step": 0.1},
                 ),
+                "aspect_ratio": (["16:9", "21:9", "4:3", "1:1", "3:4", "9:16"],),
             }
         }
 

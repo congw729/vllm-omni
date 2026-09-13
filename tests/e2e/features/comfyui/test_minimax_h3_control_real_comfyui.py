@@ -43,7 +43,7 @@ def _find_comfyui_source() -> Path:
     for candidate in candidates:
         if (candidate / "comfy_api/latest/_input_impl/video_types.py").is_file():
             return candidate
-    pytest.skip("Real ComfyUI source checkout not found; set COMFYUI_SOURCE_ROOT to run this encoding proof.")
+    return pytest.skip("Real ComfyUI source checkout not found; set COMFYUI_SOURCE_ROOT to run this encoding proof.")
 
 
 def _package(monkeypatch: pytest.MonkeyPatch, name: str) -> ModuleType:
@@ -72,9 +72,9 @@ def _load_real_video_types(
     input_package = _package(monkeypatch, f"{prefix}._input")
     util_package = _package(monkeypatch, f"{prefix}._util")
     _package(monkeypatch, f"{prefix}._input_impl")
-    input_package.ImageInput = torch.Tensor
-    input_package.MaskInput = torch.Tensor
-    input_package.AudioInput = dict
+    setattr(input_package, "ImageInput", torch.Tensor)
+    setattr(input_package, "MaskInput", torch.Tensor)
+    setattr(input_package, "AudioInput", dict)
 
     source_root = comfyui_root / "comfy_api/latest"
     util_types = _load_module(
@@ -90,12 +90,12 @@ def _load_real_video_types(
         f"{prefix}._input.video_types",
         source_root / "_input/video_types.py",
     )
-    input_package.VideoInput = input_types.VideoInput
+    setattr(input_package, "VideoInput", input_types.VideoInput)
 
     comfy_package = _package(monkeypatch, "comfy")
     comfy_utils = ModuleType("comfy.utils")
-    comfy_utils.ProgressBar = _ProgressBar
-    comfy_package.utils = comfy_utils
+    setattr(comfy_utils, "ProgressBar", _ProgressBar)
+    setattr(comfy_package, "utils", comfy_utils)
     monkeypatch.setitem(sys.modules, "comfy.utils", comfy_utils)
 
     input_impl = _load_module(
@@ -181,3 +181,44 @@ def test_real_comfyui_non_mp4_source_is_uploaded_as_the_declared_mp4(monkeypatch
     with av.open(encoded) as container:
         assert container.format.name.startswith("mov,mp4")
         assert container.streams.video[0].codec_context.name == "h264"
+
+
+@pytest.mark.parametrize("channels", [0, 1, 2])
+def test_real_comfyui_generated_audio_survives_decode_and_save(monkeypatch: pytest.MonkeyPatch, channels: int) -> None:
+    from types import SimpleNamespace
+
+    from comfyui_vllm_omni.utils import format as media_format
+
+    video_cls, _, components_cls, _, _ = _load_real_video_types(monkeypatch, _find_comfyui_source())
+    monkeypatch.setattr(media_format, "Types", SimpleNamespace(VideoComponents=components_cls))
+    monkeypatch.setattr(media_format, "InputImpl", SimpleNamespace(VideoFromComponents=video_cls))
+    sample_rate = 48000
+    audio = None
+    if channels:
+        time = torch.arange(sample_rate, dtype=torch.float32) / sample_rate
+        waveform = torch.stack(
+            [0.25 * torch.sin(2 * torch.pi * frequency * time) for frequency in (440, 880)[:channels]]
+        )
+        audio = {"waveform": waveform.unsqueeze(0), "sample_rate": sample_rate}
+    source = video_cls(components_cls(images=torch.zeros((24, 32, 32, 3)), frame_rate=Fraction(24), audio=audio))
+    encoded = video_to_bytes(source, "generated.mp4", **MINIMAX_H3_CONTROL_VIDEO_ENCODING).getvalue()
+
+    decoded = media_format.bytes_to_video(encoded)
+    components = decoded.get_components()
+    assert components.images.shape == (24, 32, 32, 3)
+    assert components.frame_rate == 24
+    if not channels:
+        assert components.audio is None
+        return
+    assert components.audio is not None
+    assert components.audio["sample_rate"] == sample_rate
+    received = components.audio["waveform"]
+    assert received.shape[:2] == (1, channels)
+    assert abs(received.shape[-1] - sample_rate) <= 1024
+    assert torch.mean(received.square()) > 0.01
+
+    saved = video_to_bytes(decoded, "comfy-output.mp4", **MINIMAX_H3_CONTROL_VIDEO_ENCODING)
+    with av.open(saved) as container:
+        assert len(container.streams.audio) == 1
+        frames = list(container.decode(audio=0))
+        assert sum(frame.samples for frame in frames) >= sample_rate
