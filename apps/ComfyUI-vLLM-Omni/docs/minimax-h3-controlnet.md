@@ -208,8 +208,42 @@ record its steps and associate both files with the job ID. Check decodability
 and listen to both tracks. Backend silence and audio lost during client
 conversion require separate diagnosis.
 
-This initial implementation is undergoing runtime validation. Successful CPU
-checks alone do not establish real UI or model-generation results.
+### Recorded runtime results (2026-09-13 to 2026-09-14)
+
+The WF-06 implementation at `60a2361e2` completed 12 real ComfyUI runs, covering
+all six modes, static/dynamic Inpaint masks, combined control/source/mask,
+an ordinary no-Control baseline, and default-template export/reimport/replay.
+The 115 combined workflow/client/API/control-model regression tests and six
+real ComfyUI encoding tests passed on this code.
+
+The runtime used original Union BF16 weights, TP2 and TORCH_SDPA, with the
+Base defaults above. A request for 40 steps executed 39 denoiser forwards.
+Every server response and saved output fully decoded to 124 frames at 24 FPS,
+1344x768, with 32 kHz stereo audio and equal decoded audio sample counts within
+each job's before/after pair.
+
+| Mode | Observed output and remaining validation |
+| --- | --- |
+| Canny | Forest and default dancer layouts followed the input; generated audio was very weak |
+| Depth | Astronaut/landing-pod layout was recognizable; audio signal present |
+| HED | Dinosaur/BMX outlines followed the hint; audio signal present |
+| MLSD | Village generated; adherence to sparse lines needs further review; audio very weak |
+| Pose | All 124 frames passed through SDPose; sampled poses corresponded to the source; full motion/hand review pending |
+| Inpaint | Static, dynamic and wider masks completed, but the requested bridge was absent; audio very weak at strength 1 |
+
+The forest Canny server response had audio RMS `1.88e-5`, compared with
+`5.27e-3` for the same prompt/seed without Control. Lowering static Inpaint
+strength from 1 to 0.5 increased the audio signal but introduced black areas
+and visual artifacts. It did not resolve the requested edit. These signal
+measurements precede ComfyUI conversion; subjective audio quality and
+synchronization still need listening review.
+
+This workflow remains under development. Track the downstream observations
+in [CTRL-01 #7479](https://github.com/vllm-project/vllm-omni/pull/7479#discussion_r4000369021)
+and the client dependency in [CTRL-02 #7492](https://github.com/vllm-project/vllm-omni/pull/7492).
+Before delivery, align the dependency interfaces and shared audio fix, compare
+Canny/Inpaint with the reference runtime using matching inputs and effective
+sampling schedules, and repeat the affected quality checks.
 
 ## References
 
