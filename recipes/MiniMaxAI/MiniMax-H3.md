@@ -826,7 +826,7 @@ Set local checkpoint paths and start the control-enabled server:
 export MODEL=/path/to/MiniMax-H3/FL2VA
 export CONTROL_MODEL=/path/to/MiniMax-H3-Fun-Controlnet-Union.safetensors
 CUDA_VISIBLE_DEVICES=0,1 VLLM_WORKER_MULTIPROC_METHOD=spawn \
-vllm serve "$MODEL" --omni --task-type fl2va \
+vllm serve "$MODEL" --omni --trust-remote-code --task-type fl2va \
   --served-model-name MiniMaxAI/MiniMax-H3 --host 127.0.0.1 --port 8092 \
   --controlnet-model-path "$CONTROL_MODEL" \
   --num-gpus 2 --tensor-parallel-size 2 --text-encoder-tp-size 2 \
