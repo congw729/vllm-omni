@@ -183,8 +183,7 @@ class OmniOpenAIServingVideo:
     ) -> tuple[OmniDiffusionConfig | SimpleNamespace | None, tuple[DiffusionModelMetadata, ...]]:
         """Resolve capability metadata from the runtime and diffusion stages."""
         od_config = self._resolve_diffusion_od_config()
-        model_archs = [None if od_config is None else getattr(od_config, "model_class_name", None)]
-        model_archs.extend(_stage_diffusion_model_class_name(stage) for stage in self.stage_configs or ())
+        model_archs = self._get_model_architectures(od_config)
         return od_config, tuple(get_diffusion_model_metadata(model_arch) for model_arch in model_archs)
 
     def _resolve_video_generation_defaults(
@@ -213,6 +212,18 @@ class OmniOpenAIServingVideo:
     def set_stage_configs_if_missing(self, stage_configs: list[Any] | None) -> None:
         if self._stage_configs is None and stage_configs is not None:
             self._stage_configs = stage_configs
+
+    def _get_model_architectures(self, od_config: OmniDiffusionConfig | SimpleNamespace | None) -> list[str | None]:
+        """Read architecture names from the current config and stage projections."""
+        model_archs = [getattr(od_config, "model_class_name", None)]
+        for stage_config in self.stage_configs or ():
+            model_archs.extend(
+                (
+                    _stage_diffusion_model_class_name(stage_config),
+                    _config_value(_config_value(stage_config, "engine_args", {}), "model_class_name"),
+                )
+            )
+        return model_archs
 
     @cached_property
     def preserves_reference_image_size(self) -> bool:
@@ -247,16 +258,7 @@ class OmniOpenAIServingVideo:
     @property
     def is_minimax_h3(self) -> bool:
         config = self._resolve_diffusion_od_config()
-        architectures = {getattr(config, "model_class_name", None)}
-        for stage in self.stage_configs or ():
-            get = stage.get if isinstance(stage, Mapping) else lambda key: getattr(stage, key, None)
-            engine_args = get("engine_args") or {}
-            architectures.add(get("model_arch"))
-            architectures.add(
-                engine_args.get("model_class_name")
-                if isinstance(engine_args, Mapping)
-                else getattr(engine_args, "model_class_name", None)
-            )
+        architectures = set(self._get_model_architectures(config))
         return bool(architectures & {"MiniMaxH3Pipeline", "MiniMaxH3ModularPipeline"})
 
     @property
