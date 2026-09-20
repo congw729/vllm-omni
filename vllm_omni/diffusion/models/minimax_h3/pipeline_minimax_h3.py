@@ -873,6 +873,7 @@ class MiniMaxH3Pipeline(
             unsupported = (
                 int(self.parallel_config.ulysses_degree) != 1
                 or int(self.parallel_config.ring_degree) != 1
+                or int(self.parallel_config.allgather_degree) != 1
                 or getattr(self.parallel_config, "use_hsdp", False)
                 or getattr(od_config, "step_execution", False)
                 or getattr(od_config, "quantization_config", None)
@@ -1603,9 +1604,9 @@ class MiniMaxH3Pipeline(
         visual_condition_shapes: list[tuple[int, int, int]] | None = None,
         audio_condition_lengths: list[int] | None = None,
         keyframe_frame_indices: list[int] | None = None,
-        pad_seq_len: int | None = None,
         control_rows: torch.Tensor | None = None,
         control_context_scale: float = 1.0,
+        pad_seq_len: int | None = None,
         video_edit_clean_rows: torch.Tensor | None = None,
         video_edit_mask_rows: torch.Tensor | None = None,
         video_edit_restore_mask_rows: torch.Tensor | None = None,
@@ -1841,9 +1842,9 @@ class MiniMaxH3Pipeline(
         visual_condition_shapes: list[tuple[int, int, int]] | None = None,
         audio_condition_lengths: list[int] | None = None,
         keyframe_frame_indices: list[int] | None = None,
-        pad_seq_len: int | None = None,
         control_rows: torch.Tensor | None = None,
         control_context_scale: float = 1.0,
+        pad_seq_len: int | None = None,
         video_edit_clean_rows: torch.Tensor | None = None,
         video_edit_mask_rows: torch.Tensor | None = None,
         video_edit_restore_mask_rows: torch.Tensor | None = None,
@@ -1873,9 +1874,9 @@ class MiniMaxH3Pipeline(
             visual_condition_shapes=visual_condition_shapes,
             audio_condition_lengths=audio_condition_lengths,
             keyframe_frame_indices=keyframe_frame_indices,
-            pad_seq_len=pad_seq_len,
             control_rows=control_rows,
             control_context_scale=control_context_scale,
+            pad_seq_len=pad_seq_len,
             video_edit_clean_rows=video_edit_clean_rows,
             video_edit_mask_rows=video_edit_mask_rows,
             video_edit_restore_mask_rows=video_edit_restore_mask_rows,
@@ -2393,7 +2394,11 @@ class MiniMaxH3Pipeline(
             try:
                 media = {
                     role: load_control_pixels(
-                        control[role], num_frames=conditioning.num_frames, mask=role == "mask_path"
+                        control[role],
+                        height=conditioning.height,
+                        width=conditioning.width,
+                        num_frames=conditioning.num_frames,
+                        mask=role == "mask_path",
                     )
                     if control.get(role)
                     else None
