@@ -607,6 +607,12 @@ def test_control_rows_and_padded_sequence_survive_denoise_preparation():
         control_rows=control_rows,
         control_context_scale=0.75,
         pad_seq_len=192,
+        video_edit_clean_rows=None,
+        video_edit_mask_rows=None,
+        video_edit_restore_mask_rows=None,
+        audio_edit_clean_rows=None,
+        audio_edit_mask_rows=None,
+        audio_edit_restore_mask_rows=None,
     )
     inputs = pipeline._build_denoise_inputs(**pipeline._denoise_kwargs(context))
     branch = inputs["branch"]
