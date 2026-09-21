@@ -5,7 +5,7 @@
       {
         "hardware_marks": {
           "res": {
-            "cuda": "H100",
+            "cuda": ["H100", "B200"],
             "npu": "A3"
           },
           "num_cards": 2
@@ -21,63 +21,6 @@
       ]
     },
     "benchmark_params": [
-      {
-        "dataset_name": "random",
-        "backend": "openai-chat-omni",
-        "endpoint": "/v1/chat/completions",
-        "num_prompts": [
-          4,
-          16,
-          32,
-          64,
-          128
-        ],
-        "max_concurrency": [
-          1,
-          4,
-          8,
-          16,
-          32
-        ],
-        "random_input_len": 2500,
-        "random_output_len": 900,
-        "ignore_eos": true,
-        "percentile-metrics": "ttft,tpot,itl,e2el,audio_rtf,audio_ttfp,audio_duration",
-        "baseline": {
-          "H100": {
-            "mean_e2el_ms": [
-              11701.3818,
-              27510.3956,
-              31907.9613,
-              42173.9832,
-              63970.0751
-            ],
-            "mean_audio_rtf": [
-              0.1175,
-              0.1647,
-              0.2003,
-              0.2726,
-              0.4195
-            ]
-          },
-          "A3": {
-            "mean_e2el_ms": [
-              116311.6846,
-              163230.409,
-              183589.5107,
-              222860.7506,
-              319054.615
-            ],
-            "mean_audio_rtf": [
-              0.5075,
-              0.8746,
-              1.0848,
-              1.441,
-              2.1164
-            ]
-          }
-        }
-      },
       {
         "dataset_name": "random-mm",
         "backend": "openai-chat-omni",
@@ -103,19 +46,13 @@
         "percentile-metrics": "ttft,tpot,itl,e2el,audio_rtf,audio_ttfp,audio_duration",
         "baseline": {
           "H100": {
-            "mean_e2el_ms": [
-              3646.797
-            ],
             "mean_audio_rtf": [
               0.1098
             ]
           },
           "A3": {
-            "mean_e2el_ms": [
-              19761.5757
-            ],
             "mean_audio_rtf": [
-              0.6591
+              0.7014
             ]
           }
         }
@@ -147,19 +84,13 @@
         "percentile-metrics": "ttft,tpot,itl,e2el,audio_rtf,audio_ttfp,audio_duration",
         "baseline": {
           "H100": {
-            "mean_e2el_ms": [
-              4059.0878
-            ],
             "mean_audio_rtf": [
               0.1335
             ]
           },
           "A3": {
-            "mean_e2el_ms": [
-              35488.2901
-            ],
             "mean_audio_rtf": [
-              1.1989
+              1.2352
             ]
           }
         }
@@ -193,67 +124,13 @@
         "percentile-metrics": "ttft,tpot,itl,e2el,audio_rtf,audio_ttfp,audio_duration",
         "baseline": {
           "H100": {
-            "mean_e2el_ms": [
-              5639.5769
-            ],
             "mean_audio_rtf": [
               0.1798
             ]
           },
           "A3": {
-            "mean_e2el_ms": [
-              70571.5159
-            ],
             "mean_audio_rtf": [
-              2.25
-            ]
-          }
-        }
-      },
-      {
-        "dataset_name": "random",
-        "backend": "openai-chat-omni",
-        "endpoint": "/v1/chat/completions",
-        "num_prompts": [
-          4,
-          16,
-          32,
-          64,
-          128
-        ],
-        "max_concurrency": [
-          1,
-          4,
-          8,
-          16,
-          32
-        ],
-        "random_input_len": 2500,
-        "random_output_len": 900,
-        "ignore_eos": true,
-        "extra_body": {
-          "modalities": [
-            "text"
-          ]
-        },
-        "percentile-metrics": "ttft,tpot,itl,e2el",
-        "baseline": {
-          "H100": {
-            "mean_e2el_ms": [
-              4354.8945,
-              7672.4248,
-              9861.1687,
-              13086.8865,
-              18716.709
-            ]
-          },
-          "A3": {
-            "mean_e2el_ms": [
-              16398.5666,
-              17764.0149,
-              20987.112,
-              26886.6951,
-              37114.44
+              2.5023
             ]
           }
         }
@@ -294,7 +171,7 @@
           },
           "A3": {
             "mean_e2el_ms": [
-              2124.4597
+              2436.1048
             ]
           }
         }
@@ -337,7 +214,7 @@
           },
           "A3": {
             "mean_e2el_ms": [
-              2181.5756
+              2534.4575
             ]
           }
         }
@@ -382,7 +259,63 @@
           },
           "A3": {
             "mean_e2el_ms": [
-              3188.0819
+              3460.0385
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "test_name": "test_qwen3_omni_chunk_cuda",
+    "mark": [
+      {
+        "hardware_marks": {
+          "res": {
+            "cuda": ["H100", "B200"]
+          },
+          "num_cards": 2
+        }
+      },
+      "omni",
+      "slow"
+    ],
+    "server_params": {
+      "model": "Qwen/Qwen3-Omni-30B-A3B-Instruct",
+      "extra_cli_args": [
+        "--async-chunk"
+      ]
+    },
+    "benchmark_params": [
+      {
+        "dataset_name": "random",
+        "backend": "openai-chat-omni",
+        "endpoint": "/v1/chat/completions",
+        "num_prompts": [
+          4,
+          32,
+          128
+        ],
+        "max_concurrency": [
+          1,
+          8,
+          32
+        ],
+        "random_input_len": 100,
+        "random_output_len": 100,
+        "ignore_eos": true,
+        "extra_body": {
+          "modalities": [
+            "text"
+          ]
+        },
+        "percentile-metrics": "ttft,tpot,itl,e2el",
+        "baseline": {
+          "H100": {
+            "mean_e2el_ms": [
+              4354.8945,
+              9861.1687,
+              18716.709
             ]
           }
         }

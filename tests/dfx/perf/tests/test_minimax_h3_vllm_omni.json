@@ -5,7 +5,7 @@
       {
         "hardware_marks": {
           "res": {
-            "cuda": "H100"
+            "cuda": ["H100", "B200"]
           },
           "num_cards": 4
         }
@@ -30,7 +30,6 @@
         "vae-patch-parallel-size": 4,
         "vae-parallel-mode": "tile",
         "vae-use-tiling": true,
-        "diffusion-attention-backend": "FLASH_ATTN",
         "stage-init-timeout": 1800,
         "init-timeout": 1800,
         "enable-diffusion-pipeline-profiler": true
@@ -63,9 +62,9 @@
         },
         "baseline": {
           "H100": {
-            "throughput_qps": 0.0253,
-            "latency_mean": 39.6321,
-            "peak_memory_mb_mean": 60243.4286
+            "throughput_qps": 0.0211,
+            "latency_mean": 38.3252,
+            "peak_memory_mb_mean": 54219.6
           }
         }
       }
@@ -77,7 +76,7 @@
       {
         "hardware_marks": {
           "res": {
-            "cuda": "H100"
+            "cuda": ["H100", "B200"]
           },
           "num_cards": 4
         }
@@ -102,7 +101,6 @@
         "vae-patch-parallel-size": 4,
         "vae-parallel-mode": "tile",
         "vae-use-tiling": true,
-        "diffusion-attention-backend": "FLASH_ATTN",
         "stage-init-timeout": 1800,
         "init-timeout": 1800,
         "enable-diffusion-pipeline-profiler": true
@@ -136,9 +134,9 @@
         "num-input-images": 1,
         "baseline": {
           "H100": {
-            "throughput_qps": 0.0252,
-            "latency_mean": 39.7657,
-            "peak_memory_mb_mean": 60692.0
+            "throughput_qps": 0.0212,
+            "latency_mean": 38.1385,
+            "peak_memory_mb_mean": 54622.8
           }
         }
       }
@@ -150,7 +148,7 @@
       {
         "hardware_marks": {
           "res": {
-            "cuda": "H100"
+            "cuda": ["H100", "B200"]
           },
           "num_cards": 4
         }
@@ -175,7 +173,6 @@
         "vae-patch-parallel-size": 4,
         "vae-parallel-mode": "tile",
         "vae-use-tiling": true,
-        "diffusion-attention-backend": "FLASH_ATTN",
         "stage-init-timeout": 1800,
         "init-timeout": 1800,
         "enable-diffusion-pipeline-profiler": true
@@ -208,9 +205,9 @@
         },
         "baseline": {
           "H100": {
-            "throughput_qps": 0.0087,
-            "latency_mean": 115.3458,
-            "peak_memory_mb_mean": 61312.0
+            "throughput_qps": 0.0077,
+            "latency_mean": 105.7508,
+            "peak_memory_mb_mean": 55180.8
           }
         }
       }
@@ -222,7 +219,7 @@
       {
         "hardware_marks": {
           "res": {
-            "cuda": "H100"
+            "cuda": ["H100", "B200"]
           },
           "num_cards": 4
         }
@@ -247,7 +244,6 @@
         "vae-patch-parallel-size": 4,
         "vae-parallel-mode": "tile",
         "vae-use-tiling": true,
-        "diffusion-attention-backend": "FLASH_ATTN",
         "stage-init-timeout": 1800,
         "init-timeout": 1800,
         "enable-diffusion-pipeline-profiler": true,
@@ -284,9 +280,9 @@
         },
         "baseline": {
           "H100": {
-            "throughput_qps": 0.0238,
-            "latency_mean": 42.2711,
-            "peak_memory_mb_mean": 40211.2381
+            "throughput_qps": 0.0212,
+            "latency_mean": 38.2089,
+            "peak_memory_mb_mean": 36218.4
           }
         }
       }
