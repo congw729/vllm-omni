@@ -689,7 +689,7 @@ async def test_legacy_h3_requests_keep_exact_non_control_payload(
     assert "control_type" not in captured["fields"]
 
 
-@pytest.mark.parametrize("conflicting_input", ["frame", "references"])
+@pytest.mark.parametrize("conflicting_input", ["frame", "first_frame", "last_frame", "references"])
 def test_generate_video_rejects_control_with_existing_conditioning(conflicting_input: str) -> None:
     kwargs: dict[str, Any] = {conflicting_input: object()}
     result = VLLMOmniGenerateVideo.VALIDATE_INPUTS(
@@ -698,18 +698,18 @@ def test_generate_video_rejects_control_with_existing_conditioning(conflicting_i
         control={"control_type": "pose"},
         **kwargs,
     )
-    assert result == "MiniMax-H3 control cannot be combined with frame or references."
+    assert result == "MiniMax-H3 control cannot be combined with frame, keyframes, or references."
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("conflicting_input", ["frame", "references"])
+@pytest.mark.parametrize("conflicting_input", ["frame", "first_frame", "last_frame", "references"])
 async def test_client_rejects_control_conflicts_before_post(
     multipart_video_server: tuple[str, dict[str, Any]],
     conflicting_input: str,
 ) -> None:
     api_server, captured = multipart_video_server
     kwargs: dict[str, Any] = {conflicting_input: object()}
-    with pytest.raises(ValueError, match="cannot be combined with frame or references"):
+    with pytest.raises(ValueError, match="cannot be combined with frame, keyframes, or references"):
         await VLLMOmniClient(api_server).generate_video(
             model="custom-h3",
             prompt="conflict",
