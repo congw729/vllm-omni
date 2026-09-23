@@ -16,6 +16,7 @@ from inspect import Signature, signature
 from pathlib import Path
 from types import SimpleNamespace
 
+import anyio
 import numpy as np
 import pytest
 import torch
@@ -504,6 +505,75 @@ class TestSpeechAPI:
         assert voice_info["mime_type"] == "audio/wav"
         assert voice_info["file_size"] == len(audio_content)
         response = client.delete("/v1/audio/voices/test_voice")
+
+    def test_upload_voice_rejects_builtin_name(self, client):
+        """A name colliding with a built-in or precomputed voice is rejected."""
+        handler = client.app.state.openai_serving_speech
+        handler._adapter.capabilities.supported_speakers = {"vivian"}
+        handler._adapter.capabilities.precomputed_speakers = {"ono_anna": {}}
+
+        files = {"audio_sample": ("test.wav", b"fake audio content" * 1000, "audio/wav")}
+        for reserved in ("Vivian", "ono_anna"):
+            response = client.post("/v1/audio/voices", files=files, data={"consent": "c1", "name": reserved})
+            assert response.status_code == 400
+            assert "reserved" in response.json()["detail"]
+        assert not handler.uploaded_speakers
+
+    def test_upload_voice_overwrites_same_name_by_default(self, client):
+        """Default policy: re-registering an uploaded name replaces it in place."""
+        files = {"audio_sample": ("test.wav", b"first take", "audio/wav")}
+        data = {"consent": "c1", "name": "test_voice_ow"}
+        assert client.post("/v1/audio/voices", files=files, data=data).status_code == 200
+
+        files = {"audio_sample": ("test.wav", b"second take, longer content", "audio/wav")}
+        response = client.post("/v1/audio/voices", files=files, data=data)
+        assert response.status_code == 200
+        assert response.json()["voice"]["file_size"] == len(b"second take, longer content")
+        client.delete("/v1/audio/voices/test_voice_ow")
+
+    def test_upload_voice_immutable_policy_requires_delete(self, client):
+        """VLLM_OMNI_SPEAKER_REGISTRATION_POLICY=immutable rejects duplicates until deleted."""
+        handler = client.app.state.openai_serving_speech
+        handler._registration_policy = "immutable"
+        try:
+            files = {"audio_sample": ("test.wav", b"fake audio content" * 1000, "audio/wav")}
+            data = {"consent": "c1", "name": "test_voice_imm"}
+            assert client.post("/v1/audio/voices", files=files, data=data).status_code == 200
+
+            response = client.post("/v1/audio/voices", files=files, data=data)
+            assert response.status_code == 400
+            assert "immutable" in response.json()["detail"]
+
+            assert client.delete("/v1/audio/voices/test_voice_imm").status_code == 200
+            assert client.post("/v1/audio/voices", files=files, data=data).status_code == 200
+        finally:
+            handler._registration_policy = "overwrite"
+            client.delete("/v1/audio/voices/test_voice_imm")
+
+    def test_invalid_registration_policy_fails_startup(self, mocker, monkeypatch, tmp_path):
+        """An unknown VLLM_OMNI_SPEAKER_REGISTRATION_POLICY is a configuration error, not a silent fallback."""
+        monkeypatch.setenv("SPEAKER_SAMPLES_DIR", str(tmp_path))
+        monkeypatch.setenv("VLLM_OMNI_SPEAKER_REGISTRATION_POLICY", "append")
+        engine_client = mocker.MagicMock()
+        engine_client.default_sampling_params_list = [{}]
+        with pytest.raises(ValueError, match="VLLM_OMNI_SPEAKER_REGISTRATION_POLICY"):
+            OmniOpenAIServingSpeech(
+                engine_client=engine_client, models=mocker.MagicMock(), request_logger=mocker.MagicMock()
+            )
+
+    def test_restored_upload_shadowing_builtin_is_dropped(self, client):
+        """A pre-guard upload restored under a built-in name must not keep shadowing it."""
+        handler = client.app.state.openai_serving_speech
+        handler._adapter.capabilities.supported_speakers = {"vivian"}
+        handler._adapter.capabilities.precomputed_speakers = {}
+        handler.uploaded_speakers["vivian"] = {"name": "vivian", "file_path": "/tmp/vivian.safetensors"}
+        handler.uploaded_speakers["keep_me"] = {"name": "keep_me", "file_path": "/tmp/keep_me.safetensors"}
+
+        handler._drop_shadowing_uploads()
+
+        assert "vivian" not in handler.uploaded_speakers
+        assert "keep_me" in handler.uploaded_speakers
+        handler.uploaded_speakers.pop("keep_me")
 
     def test_upload_voice_with_ref_text(self, client, tmp_path):
         """Test voice upload with ref_text enables in-context cloning."""
@@ -5081,6 +5151,7 @@ class TestTTSAsyncOffloading:
             models=mock_models,
             request_logger=mocker.MagicMock(),
         )
+        server.uploaded_speakers = {}
         yield server
         server.shutdown()
 
@@ -5437,8 +5508,9 @@ class TestTTSAsyncOffloading:
         assert prompt["additional_information"]["non_streaming_mode"] == [True]
         assert "full_utterance_decode" not in prompt["additional_information"]
 
-    def test_qwen3_repeated_ref_audio_hot_path_sends_cache_key_without_waveform(self, qwen3_tts_server):
-        """After a ref artifact is marked ready, repeated requests avoid ref_audio payload IPC."""
+    def test_qwen3_inline_ref_audio_hot_path_does_not_use_named_speaker_cache(self, qwen3_tts_server, mocker):
+        """An OpenAI-compatible voice does not identify an inline voice clone."""
+        ignored_voice_log = mocker.patch("vllm_omni.entrypoints.openai.tts_adapters.qwen3_tts.logger.info")
         wav_list = [0.0] * 48000
         artifact_key = "a" * 40
         ref_audio = "data:audio/wav;base64,same"
@@ -5461,6 +5533,7 @@ class TestTTSAsyncOffloading:
 
         request = OpenAICreateSpeechRequest(
             input="hello",
+            voice="voice-a",
             task_type="Base",
             ref_audio=ref_audio,
             ref_text="reference",
@@ -5470,7 +5543,14 @@ class TestTTSAsyncOffloading:
         )
 
         assert request_id == "req-hot"
+        assert request.voice == "voice-a"
+        ignored_voice_log.assert_called_once_with(
+            "Ignoring voice=%r for Qwen3-TTS Base request because inline ref_audio takes precedence",
+            "voice-a",
+        )
         assert "ref_audio" not in tts_params
+        assert "speaker" not in tts_params
+        assert "voice_created_at" not in tts_params
         assert tts_params["_qwen3_tts_ref_audio_cache_key"] == [artifact_key]
         assert tts_params["ref_code_length"] == [50]
         prompt = qwen3_tts_server.engine_client.generate.call_args.kwargs["prompt"]
@@ -5700,21 +5780,34 @@ class TestTTSAsyncOffloading:
 
     @pytest.mark.asyncio
     async def test_generate_audio_chunks_discards_ref_audio_artifact_warmup_on_close(self, qwen3_tts_server):
+        closed = asyncio.Event()
+
         async def pcm_generator():
-            yield SimpleNamespace(
-                multimodal_output={
-                    "audio": torch.zeros(16, dtype=torch.float32),
-                    "sr": 24000,
-                }
-            )
-            await asyncio.sleep(0)
+            try:
+                yield OmniRequestOutput(
+                    request_id="req-close",
+                    final_output_type="audio",
+                    _multimodal_output={
+                        "audio": torch.zeros(16, dtype=torch.float32),
+                        "sr": 24000,
+                    },
+                )
+            finally:
+                # Engine abort waits for stage acknowledgments. Retain an
+                # actual cancellation checkpoint to cover ASGI cancel scopes.
+                await anyio.sleep(0)
+                closed.set()
 
         qwen3_tts_server._request_ref_audio_artifact_keys["req-close"] = ("artifact-close", False)
 
-        stream = qwen3_tts_server._generate_audio_chunks(pcm_generator(), "req-close")
+        engine_stream = pcm_generator()
+        stream = qwen3_tts_server._generate_audio_chunks(engine_stream, "req-close")
         assert await anext(stream)
-        await stream.aclose()
+        with anyio.CancelScope() as scope:
+            scope.cancel()
+            await stream.aclose()
 
+        assert closed.is_set()
         assert "req-close" not in qwen3_tts_server._request_ref_audio_artifact_keys
         assert ("artifact-close", False) not in qwen3_tts_server._ref_audio_model_artifact_ready
 
