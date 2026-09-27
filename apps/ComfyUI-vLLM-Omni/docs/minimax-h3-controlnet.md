@@ -213,6 +213,11 @@ record its steps and associate both files with the job ID. Check decodability
 and listen to both tracks. Backend silence and audio lost during client
 conversion require separate diagnosis.
 
+Current H3 requests count denoiser evaluations: `num_inference_steps=40`
+runs 40 forwards using 41 sigma boundaries. The historical measurements below
+used the previous step-count convention; preserve their recorded request values
+when comparing old results.
+
 ### Recorded runtime results (2026-09-13 to 2026-09-14)
 
 The WF-06 implementation at `60a2361e2` completed 12 real ComfyUI runs, covering
