@@ -1,6 +1,7 @@
 [
   {
     "test_name": "test_minicpmo_4_5",
+    "description": "H100 baseline refreshed 2026-09-29: equal-weight nightly means for 2026-09-22 through 2026-09-28 (7 runs each for C1/P32, C4/P64, C8/P128), rounded to 4 decimals without an added margin. Uses request reference audio after #6628; duplex_seed_tts excluded. A3 unchanged.",
     "mark": [
       {
         "hardware_marks": {
@@ -56,29 +57,29 @@
         "baseline": {
           "H100": {
             "request_throughput": [
-              0.9731,
-              1.1986,
-              1.686
+              0.9615,
+              1.4882,
+              1.6245
             ],
             "mean_ttft_ms": [
-              152.5665,
-              270.2559,
-              301.455
+              156.5006,
+              272.8529,
+              283.2613
             ],
             "mean_e2el_ms": [
-              1027.2953,
-              3306.3735,
-              4686.5366
+              1042.7617,
+              2669.8806,
+              4882.2845
             ],
             "mean_audio_ttfp_ms": [
-              458.1553,
-              2030.2335,
-              2068.6233
+              585.7387,
+              1396.1575,
+              2508.4384
             ],
             "mean_audio_rtf": [
-              0.2357,
-              0.791,
-              1.0324
+              0.2504,
+              0.6281,
+              1.1787
             ]
           },
           "A3": {
