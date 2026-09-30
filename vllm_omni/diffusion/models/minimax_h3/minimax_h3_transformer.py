@@ -10,7 +10,7 @@ layout.
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 
 import torch
@@ -33,6 +33,7 @@ from vllm_omni.diffusion.layers.indexed_modulation import indexed_scale_shift_
 from vllm_omni.diffusion.models.host_weight_contract import FinalLayoutModelContract
 from vllm_omni.platforms import current_omni_platform
 
+from .adaln_cache import MiniMaxH3RuntimeAdalnCache
 from .controlnet import MiniMaxH3ControlNet
 from .fasth3 import _resolve_native_target
 from .minimax_h3_blocks import (
@@ -391,6 +392,7 @@ class MiniMaxH3FinalLayer(nn.Module):
         quant_config: QuantizationConfig | None,
         *,
         prefix: str,
+        adaln_cache: MiniMaxH3RuntimeAdalnCache | None = None,
     ) -> None:
         super().__init__()
         video_patch_dim = arch.latents_dim * arch.patch_size[0] * arch.patch_size[1] * arch.patch_size[2]
@@ -402,6 +404,7 @@ class MiniMaxH3FinalLayer(nn.Module):
             expand_ratio=2,
             modality_num=1,
             prefix=f"{prefix}.adaln_proj",
+            adaln_cache=adaln_cache,
         )
         self.video_out = ColumnParallelLinear(
             arch.hidden_size,
@@ -580,6 +583,15 @@ class MiniMaxH3DiTModel(nn.Module):
         self._rope_theta = float(config_mapping.get("rope_theta", 10000.0))
         arch = MiniMaxH3DiTArchConfig.from_mapping(config_mapping)
         self.arch = arch
+        cache_config = getattr(od_config, "cache_config", {})
+        enabled = (
+            cache_config.get("minimax_h3_adaln_cache", True)
+            if isinstance(cache_config, Mapping)
+            else getattr(cache_config, "minimax_h3_adaln_cache", True)
+        )
+        if type(enabled) is not bool:
+            raise ValueError("minimax_h3_adaln_cache must be a boolean")
+        self.adaln_cache = MiniMaxH3RuntimeAdalnCache(max_bytes=256 * 1024**2 if enabled else 0)
         self.od_config = od_config
         self.parallel_config = od_config.parallel_config
         self.hidden_size = arch.hidden_size
@@ -643,6 +655,7 @@ class MiniMaxH3DiTModel(nn.Module):
                     arch,
                     quant_config,
                     prefix=f"blocks.{i}",
+                    adaln_cache=self.adaln_cache,
                 )
                 for i in range(arch.num_layers)
             ]
@@ -658,6 +671,7 @@ class MiniMaxH3DiTModel(nn.Module):
             arch,
             quant_config,
             prefix="final_layer",
+            adaln_cache=self.adaln_cache,
         )
         self._mark_missing_params_required()
 
@@ -730,6 +744,12 @@ class MiniMaxH3DiTModel(nn.Module):
         if rope_table.dtype != _BF16_DTYPE:
             raise ValueError(f"rope_table must be {_BF16_DTYPE}, got {rope_table.dtype}.")
 
+    def _apply(self, fn, recurse=True):
+        # Derived outputs must not keep the old device alive after offload/move.
+        if getattr(self, "adaln_cache", None) is not None:
+            self.adaln_cache.clear()
+        return super()._apply(fn, recurse=recurse)
+
     def post_load_weights(self) -> None:
         for name, param in self.named_parameters():
             if name in MINIMAX_H3_FP32_PARAM_NAMES and param.dtype != _FP32_DTYPE:
@@ -747,6 +767,8 @@ class MiniMaxH3DiTModel(nn.Module):
         weights: Iterable[tuple[str, torch.Tensor]],
     ) -> set[str]:
         """Load native or Diffusers H3 weights with the existing TP-aware loaders."""
+        if getattr(self, "adaln_cache", None) is not None:
+            self.adaln_cache.clear()
         params = dict(self.named_parameters())
         params.update(dict(self.named_buffers()))
         loaded: set[str] = set()
@@ -1073,6 +1095,9 @@ class MiniMaxH3DiTModel(nn.Module):
                 packed_total=seq_len,
                 num_requests=num_requests,
             )
+        if getattr(self, "adaln_cache", None) is not None:
+            self.adaln_cache.prepare(t_emb)
+
         for block_index, block in enumerate(self.blocks):
             hidden = block(
                 hidden,

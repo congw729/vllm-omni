@@ -725,6 +725,9 @@ curl -sS -X POST "${API_URL}" \
 ### 3. Ref2VA: image-only, image/audio, or mixed references
 
 Run these requests against the combined service or a Ref2VA-only service.
+Reference images keep their original resolution, with dimensions aligned to
+32 pixels. No additional request or server setting is needed.
+
 Image-only Ref2VA omits `audio_reference`; adding one or more audio references
 is optional. The typed fields accept one object or an ordered JSON list.
 `audio_reference` accepts an HTTP(S) URL or a `data:` URL. In one terminal,
@@ -782,6 +785,9 @@ Run this request against the combined service. Repeat the
 `input_references` multipart field once per source video. H3 consumes the
 videos in form order and preserves their original soundtracks during
 conditioning.
+Small reference videos retain their original size; larger videos are scaled
+down to the reference canvas. Dimensions are aligned to 32 pixels. No
+additional request or server setting is needed.
 
 ```bash
 export SUBJECT_VIDEO=/path/to/green_screen_subject.mp4
@@ -841,7 +847,7 @@ vllm serve "$MODEL" --omni --task-type fl2va --trust-remote-code \
 ```
 
 The initial control path uses resident BF16 weights and tensor parallelism.
-Reference/keyframe conditioning, sequence parallelism, cache acceleration and
+Reference/keyframe conditioning, sequence parallelism, approximate cache acceleration and
 quantized control execution require separate support; do not combine them with
 this configuration. Control/Turbo combinations need their own validation and
 are not established by ordinary H3 Turbo results.
@@ -910,9 +916,13 @@ inpainting also completed with the native
 positions / 4 denoiser forwards, video/audio shifts 6/3, guidance 1, adapter
 scale 1, seed 1101, 1344x768, 124 frames and 24 FPS.
 
+These checks predate the step-count alignment: the recorded Base requests used
+40 sigma positions / 39 denoiser forwards. The current examples above use
+40 forwards; use `num_inference_steps=39` to match that earlier Base comparison.
+
 To reproduce that Turbo comparison, add `--lora-backend peft --lora-path "$TURBO_LORA"`
 at startup and activate the same artifact in the request, following the
-[LoRA contract](#lora). Change the request to `num_inference_steps=5`,
+[LoRA contract](#lora). Change the request to `num_inference_steps=4`,
 `flow_shift=6`, and add:
 
 ```bash
@@ -928,12 +938,14 @@ the same-seed control-disabled sample. This remained after matching the
 reference timestep precision and correcting container timestamp rounding.
 A Base 40-step Canny comparison restored the audio signal level, but a
 final-code Base 40-step inpainting sample was also nearly silent. Base
-inpainting therefore is not established as a workaround. Audio quality
-validation remains incomplete for these combinations; an independent
-reference-runtime comparison is needed before attributing the limitation
-to the model or the integration. These checks establish those two request paths,
+inpainting therefore is not established as a workaround. A same-input comparison
+with the pinned VideoX-Fun reference runtime also produced nearly silent Base
+inpainting audio and no requested footbridge in the inspected frames. These
+results are not unique to the Omni API path, but do not isolate a checkpoint,
+training, or integration defect. Audio quality validation remains incomplete.
+These checks establish those two request paths,
 not an exhaustive quality evaluation of all hint types or Turbo variants. The
-40-step examples above follow the original control recipe. This does not
+40-forward examples above use the current API step-count convention. This does not
 claim exhaustive coverage of all Base or Turbo conditioning combinations.
 
 Four additional real-model API smokes used synthetic analytic Depth, HED,
@@ -1170,6 +1182,84 @@ balanced switch order.
 > workload. The values above apply to this deployment and are not universal
 > guarantees. `lossless` remains the exact reference path.
 
+## Exact AdaLN reuse
+
+H3 enables exact AdaLN projection reuse by default, independently of the task,
+hardware, sampling schedule, quantization setting, and request `quality`.
+This applies to both original H3 (including its default 50-point schedule) and
+FastH3; no distilled adapter or explicit few-step ladder is required.
+The first occurrence of an input runs the existing projection; later identical
+time embeddings reuse its output only while the projection weights and numerical
+settings remain unchanged. This does not approximate neighboring timesteps or
+change attention, precision, sampling, or the generated audio/video contract.
+
+Each DiT keeps at most 256 MiB of runtime projection outputs. If a long schedule
+exceeds that budget, it retains a reusable subset and computes other entries
+normally, avoiding cyclic eviction on repeated original-H3 requests. All original weights
+remain loaded so new schedules and adapters can compute normally. Adapter changes,
+weight reloads, and model device moves invalidate the cache; parameter versions
+also guard individual entries. TP ranks coordinate hits before skipping a
+projection collective. Gradient-enabled execution, compilation, custom linear
+hooks, and tensors without weight version counters use the original computation.
+Offload paths that replace weight storage can therefore reduce the hit rate.
+
+The runtime cache uses the shared `ExactProjectionCache` implementation; H3 keeps
+only its optional sidecar adaptation. Other models can integrate the same
+[projection cache interface](../../docs/design/module/diffusion/diffusion_model_integration.md#exact-conditioning-projection-reuse).
+This cache retains projection outputs, not offloaded weights, and does not skip
+block weight prefetch.
+
+For an A/B comparison, disable only this reuse at server startup:
+
+```bash
+--cache-config '{"minimax_h3_adaln_cache": false}'
+```
+
+### Optional offline sidecar
+
+An offline sidecar can seed the first projection results; it is not required to
+enable the default cache. Sidecars require `--enforce-eager`, native BF16 TP1
+math, and the same numerical environment as the builder. With the default
+compiled execution, sidecars are rejected before reading their payloads: compiled
+H3 blocks bypass cached projections, so retaining those payloads would waste GPU
+memory. This applies to both the main and Ref2VA sidecars. Other serving
+configurations retain the default runtime-cache behavior described above.
+From the repository root, for a fixed FastH3 adapter and its own four-step schedule:
+
+```bash
+PYTHONPATH=. python tools/minimax_h3/build_adaln_cache.py \
+  --transformer-path "${MODEL_ROOT}/FL2VA/transformer" \
+  --model-variant fl2va --mode t2va \
+  --fasth3-adapter "${FASTH3_ADAPTER}" \
+  --num-inference-steps 4 --flow-shift 12 --audio-flow-shift 3 \
+  --device cuda --output /path/to/h3-adaln.safetensors
+```
+
+Omit `--fasth3-adapter` for base weights and use the serving step count and shifts.
+The builder accepts a native transformer directory with `config.json` and indexed
+or single-file safetensors. It streams the required inputs and refuses to overwrite
+an existing output. It does not instantiate the full DiT.
+
+Pass the resulting local artifact at eager server startup:
+
+```bash
+--enforce-eager \
+--cache-config '{"minimax_h3_adaln_cache_path": "/path/to/h3-adaln.safetensors"}'
+```
+
+Combined servers can also use `minimax_h3_ref_adaln_cache_path` for their Ref2VA
+transformer. Each artifact binds the model architecture, task, schedule, shifts,
+fixed adapter file, effective time-embedding/AdaLN weights, payload checksums, and
+numerical environment. A missing, corrupt, incompatible, or outdated sidecar is
+rejected with a warning; the model still loads every weight and computes through
+the runtime path. A request with different settings similarly falls back.
+Build sidecars from trusted local inputs: checksums verify identity and integrity,
+not the correctness of an untrusted generator.
+
+This implementation saves repeated projection work. It does not remove AdaLN
+weights or claim a GPU memory reduction. End-to-end gains depend on the workload,
+offload behavior, embedding fingerprint cost, and TP coordination overhead.
+
 ## LoRA
 
 ### Turbo LoRA
@@ -1183,14 +1273,14 @@ rejected.
 
 | Artifact | Task | Forwards | `num_inference_steps` | `flow_shift` | declared `alpha` |
 | --- | --- | ---: | ---: | ---: | ---: |
-| `minimax_h3_fl2v_turbo_4step_v0.1.safetensors` | T2VA / FL2VA | 4 | 5 | 12 | none -> 8 |
-| `minimax_h3_fl2v_turbo_4step_v1.0_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 5 | 6 | 128 |
-| `minimax_h3_fl2v_turbo_4step_v1.1_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 5 | 6 | 128 |
-| `minimax_h3_fl2v_turbo_4step_v1.2_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 5 | 6 | 8 |
-| `minimax_h3_fl2v_turbo_8step_v1.0_bf16.safetensors` | T2VA / FL2VA | 8 | 9 | 12 | 8 |
-| `minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors` | T2VA / FL2VA | 8 | 9 | 6 | 8 |
-| `minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors` | Ref2VA | 4 | 5 | 12 | 8 |
-| `minimax_h3_ref2v_turbo_8step_v1.0_768p_bf16.safetensors` | Ref2VA | 8 | 9 | 6 | 8 |
+| `minimax_h3_fl2v_turbo_4step_v0.1.safetensors` | T2VA / FL2VA | 4 | 4 | 12 | none -> 8 |
+| `minimax_h3_fl2v_turbo_4step_v1.0_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 4 | 6 | 128 |
+| `minimax_h3_fl2v_turbo_4step_v1.1_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 4 | 6 | 128 |
+| `minimax_h3_fl2v_turbo_4step_v1.2_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 4 | 6 | 8 |
+| `minimax_h3_fl2v_turbo_8step_v1.0_bf16.safetensors` | T2VA / FL2VA | 8 | 8 | 12 | 8 |
+| `minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors` | T2VA / FL2VA | 8 | 8 | 6 | 8 |
+| `minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors` | Ref2VA | 4 | 4 | 12 | 8 |
+| `minimax_h3_ref2v_turbo_8step_v1.0_768p_bf16.safetensors` | Ref2VA | 8 | 8 | 6 | 8 |
 
 `audio_flow_shift` is `3.0` across the family. Each row is the complete
 published filename; use it verbatim as `TURBO_FILE` below.
@@ -1242,7 +1332,7 @@ Start from a non-offloaded or DLO FL2VA server command and add
 carry that artifact's sampling settings:
 
 ```bash
--F 'num_inference_steps=5' \
+-F 'num_inference_steps=4' \
 -F 'flow_shift=6' \
 -F 'extra_params={"task":"t2va","duration":4.4,"audio_flow_shift":3.0}' \
 -F "lora={\"name\":\"h3-turbo-v1.0\",\"path\":\"${TURBO_LORA}\",\"scale\":1.0}"
@@ -1250,7 +1340,7 @@ carry that artifact's sampling settings:
 
 Switching to another FL2VA artifact means repointing `TURBO_FILE`, which moves
 both `--lora-path` and the request's `lora.path`, and carrying that row's
-`num_inference_steps` and `flow_shift`: `9` and `6` for `8step_v1.0_768p`, `9`
+`num_inference_steps` and `flow_shift`: `8` and `6` for `8step_v1.0_768p`, `8`
 and `12` for the 544p `8step_v1.0`. A request that does not match the loaded
 artifact is rejected, so a mismatch cannot silently degrade output.
 

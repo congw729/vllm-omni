@@ -34,6 +34,8 @@ from vllm_omni.diffusion.layers.indexed_modulation import (
 from vllm_omni.diffusion.layers.norm import RMSNorm
 from vllm_omni.diffusion.layers.rope import RotaryEmbedding
 
+from .adaln_cache import MiniMaxH3RuntimeAdalnCache
+
 if TYPE_CHECKING:
     from vllm.model_executor.layers.quantization.base_config import QuantizationConfig
 
@@ -491,12 +493,15 @@ class MiniMaxH3AdalnProj(nn.Module):
         expand_ratio: int,
         modality_num: int,
         prefix: str,
+        adaln_cache: MiniMaxH3RuntimeAdalnCache | None = None,
     ) -> None:
         super().__init__()
         if out_features != expand_ratio * arch.hidden_size * modality_num:
             raise ValueError(
                 f"adaln out_features mismatch: {out_features} != {expand_ratio}*{arch.hidden_size}*{modality_num}"
             )
+        self._adaln_cache = adaln_cache
+        self._cache_name = prefix + ".linear"
         self.expand_ratio = expand_ratio
         self.modality_num = modality_num
         self.hidden_size = arch.hidden_size
@@ -512,8 +517,16 @@ class MiniMaxH3AdalnProj(nn.Module):
 
     def forward(self, t_emb: torch.Tensor) -> tuple[torch.Tensor, ...]:
         """t_emb: [M, t_dim] -> expand_ratio tensors of [M*modality_num, H]."""
-        x = nn.functional.silu(t_emb)
-        x, _ = self.linear(x.to(_BF16_DTYPE))
+
+        def project() -> torch.Tensor:
+            x = nn.functional.silu(t_emb)
+            return self.linear(x.to(_BF16_DTYPE))[0]
+
+        x = (
+            project()
+            if self._adaln_cache is None
+            else self._adaln_cache.project(self._cache_name, self.linear, t_emb, project)
+        )
         m = x.shape[0]
         x = x.view(m * self.modality_num, self.expand_ratio * self.hidden_size)
         return tuple(x.chunk(self.expand_ratio, dim=-1))
@@ -526,6 +539,7 @@ class MiniMaxH3DiTBlock(nn.Module):
         quant_config: QuantizationConfig | None,
         *,
         prefix: str,
+        adaln_cache: MiniMaxH3RuntimeAdalnCache | None = None,
     ) -> None:
         super().__init__()
         self.norm1 = _norm(arch.hidden_size, eps=arch.norm_eps)
@@ -549,6 +563,7 @@ class MiniMaxH3DiTBlock(nn.Module):
             expand_ratio=6,
             modality_num=MINIMAX_H3_ADALN_MODALITY_NUM,
             prefix=f"{prefix}.adaln_proj",
+            adaln_cache=adaln_cache,
         )
 
     def forward(
