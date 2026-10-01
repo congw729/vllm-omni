@@ -237,6 +237,7 @@ class VLLMOmniGenerateVideo(_VLLMOmniGenerateBase):
         references=None,
         control=None,
         fast_h3=None,
+        latent_edit=None,
         **_kwargs,
     ) -> str | Literal[True]:
         base = super().VALIDATE_INPUTS(url, model)
@@ -252,8 +253,10 @@ class VLLMOmniGenerateVideo(_VLLMOmniGenerateBase):
             return (
                 "FastH3 Preview supports T2VA only; disconnect frame, first_frame, last_frame, and references inputs."
             )
-        if control is not None and any(value is not None for value in (frame, first_frame, last_frame, references)):
-            return "MiniMax-H3 control cannot be combined with frame, keyframes, or references."
+        if control is not None and any(
+            value is not None for value in (frame, first_frame, last_frame, references, latent_edit)
+        ):
+            return "MiniMax-H3 control cannot be combined with frame, keyframes, references, or latent-mask editing."
         if control is not None:
             try:
                 validate_minimax_h3_control(control)

@@ -46,8 +46,8 @@ NODE_CLASS_MAPPINGS = {
     "VLLMOmniGenerateMusic": VLLMOmniGenerateMusic,
     "VLLMOmniVoiceClone": VLLMOmniVoiceClone,
     "VLLMOmniVideoReferences": VLLMOmniVideoReferences,
-    "VLLMOmniMiniMaxH3Control": VLLMOmniMiniMaxH3Control,
     "VLLMOmniLatentMaskEditing": VLLMOmniLatentMaskEditing,
+    "VLLMOmniMiniMaxH3Control": VLLMOmniMiniMaxH3Control,
     # === Params ===
     "VLLMOmniARSampling": VLLMOmniARSampling,
     "VLLMOmniDiffusionSampling": VLLMOmniDiffusionSampling,
@@ -70,8 +70,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VLLMOmniGenerateMusic": "Generate Music",
     "VLLMOmniVoiceClone": "TTS Voice Cloning",
     "VLLMOmniVideoReferences": "Video References",
-    "VLLMOmniMiniMaxH3Control": "MiniMax-H3 Control",
     "VLLMOmniLatentMaskEditing": "Latent Mask Editing",
+    "VLLMOmniMiniMaxH3Control": "MiniMax-H3 Control",
     # === Params ===
     "VLLMOmniARSampling": "AR Sampling Params",
     "VLLMOmniDiffusionSampling": "Diffusion Sampling Params",

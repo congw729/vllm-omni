@@ -30,6 +30,10 @@ class MiniMaxH3ModelSpecificParams(dict):
     pass
 
 
+MAX_REFERENCE_IMAGES = 9
+MAX_REFERENCE_VIDEOS = 3
+MAX_REFERENCE_AUDIOS = 3
+MAX_TOTAL_REFERENCES = 12
 MiniMaxH3ControlType: TypeAlias = Literal["canny", "depth", "hed", "mlsd", "pose", "inpaint"]
 MINIMAX_H3_CONTROL_TYPES = get_args(MiniMaxH3ControlType)
 
@@ -41,12 +45,6 @@ class MiniMaxH3Control(TypedDict):
     source_video: NotRequired[Any]
     mask: NotRequired[Any]
     mask_video: NotRequired[Any]
-
-
-MAX_REFERENCE_IMAGES = 9
-MAX_REFERENCE_VIDEOS = 3
-MAX_REFERENCE_AUDIOS = 3
-MAX_TOTAL_REFERENCES = 12
 
 
 class VideoReferences(dict):

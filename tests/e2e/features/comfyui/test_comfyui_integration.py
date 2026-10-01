@@ -103,8 +103,8 @@ class SamplingKind(str, Enum):
     VIDEO_FASTH3 = "video_fasth3"
     VIDEO_REF2VA_IMAGE_AUDIO = "video_ref2va_image_audio"
     VIDEO_REF2VA_MULTI_VIDEO = "video_ref2va_multi_video"
-    VIDEO_H3_CONTROL = "video_h3_control"
     VIDEO_REF2VA_MIXED = "video_ref2va_mixed"
+    VIDEO_H3_CONTROL = "video_h3_control"
 
 
 # Pre-defined arguments to be used in function calls during the tests
@@ -176,15 +176,15 @@ H3_MODEL_PARAMS = MiniMaxH3ModelSpecificParams(
     }
 )
 
-H3_SERVER_CONTRACT_AVAILABLE = (
-    "source_reference" in inspect.signature(video_generation_helpers._parse_video_form).parameters
-)
 H3_STAGE_CONFIG = {
     "stage_type": "diffusion",
     "final_output": True,
     "final_output_type": "video",
     "engine_args": {"model_class_name": "MiniMaxH3Pipeline"},
 }
+H3_SERVER_CONTRACT_AVAILABLE = (
+    "source_reference" in inspect.signature(video_generation_helpers._parse_video_form).parameters
+)
 
 LORA_PARAMS = {"local_path": "test_lora_path", "name": "test_name", "scale": 0.7, "int_id": 10}
 

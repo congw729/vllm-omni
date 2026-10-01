@@ -323,20 +323,25 @@ class VLLMOmniClient:
         """
         if frame is not None and references is not None:
             raise ValueError("Provide only one of frame or references, not both.")
-        if control is not None and any(value is not None for value in (frame, first_frame, last_frame, references)):
-            raise ValueError("MiniMax-H3 control cannot be combined with frame, keyframes, or references.")
+        if frame is not None and (first_frame is not None or last_frame is not None):
+            raise ValueError("Provide either frame or first_frame/last_frame, not both.")
+        if references is not None and (first_frame is not None or last_frame is not None):
+            raise ValueError("Provide either first_frame/last_frame or references, not both.")
+
+        if control is not None and any(
+            value is not None for value in (frame, first_frame, last_frame, references, latent_edit)
+        ):
+            raise ValueError(
+                "MiniMax-H3 control cannot be combined with frame, keyframes, references, or latent-mask editing."
+            )
         if control is not None:
             validate_minimax_h3_control(control)
             conflicting_namespaces = set(extra_params) & set(MINIMAX_H3_CONTROL_TYPES)
             if conflicting_namespaces:
                 conflicts = ", ".join(sorted(conflicting_namespaces))
                 raise ValueError(f"Conflicting MiniMax-H3 control namespaces: {conflicts}.")
-        if frame is not None and (first_frame is not None or last_frame is not None):
-            raise ValueError("Provide either frame or first_frame/last_frame, not both.")
-        if references is not None and (first_frame is not None or last_frame is not None):
-            raise ValueError("Provide either first_frame/last_frame or references, not both.")
 
-        _, matched_pattern = lookup_model_spec(spec_model or model)
+        spec, matched_pattern = lookup_model_spec(spec_model or model)
         if (first_frame is not None or last_frame is not None) and (
             matched_pattern is None or "MiniMax-H3" not in matched_pattern
         ):
@@ -423,52 +428,6 @@ class VLLMOmniClient:
                 content_type="image/png",
             )
 
-        if control is not None:
-            control_type = control["control_type"]
-            form.add_field("control_type", control_type)
-            control_video = control.get("control_video")
-            if control_video is not None:
-                control_filename = "control.mp4"
-                _add_video_upload(
-                    form,
-                    "control_reference",
-                    control_video,
-                    control_filename,
-                    **MINIMAX_H3_CONTROL_VIDEO_ENCODING,
-                )
-            source_video = control.get("source_video")
-            if source_video is not None:
-                source_filename = "source.mp4"
-                _add_video_upload(
-                    form,
-                    "source_reference",
-                    source_video,
-                    source_filename,
-                    **MINIMAX_H3_CONTROL_VIDEO_ENCODING,
-                )
-            mask = control.get("mask")
-            if mask is not None:
-                mask_filename = "mask.png"
-                form.add_field(
-                    "mask_reference",
-                    mask_tensor_to_png_bytes(mask, mask_filename),
-                    filename=mask_filename,
-                    content_type="image/png",
-                )
-            mask_video = control.get("mask_video")
-            if mask_video is not None:
-                mask_filename = "mask.mp4"
-                _add_video_upload(
-                    form,
-                    "mask_reference",
-                    mask_video,
-                    mask_filename,
-                    **MINIMAX_H3_CONTROL_VIDEO_ENCODING,
-                )
-            extra_params = {
-                **extra_params,
-                control_type: {"control_context_scale": control["control_context_scale"]},
-            }
         # === latent-mask editing (MiniMax H3) ===
         if latent_edit is not None:
             source_video = latent_edit.get("source_video")
@@ -524,6 +483,52 @@ class VLLMOmniClient:
                     filename=image_filename,
                     content_type="image/png",
                 )
+        if control is not None:
+            control_type = control["control_type"]
+            form.add_field("control_type", control_type)
+            control_video = control.get("control_video")
+            if control_video is not None:
+                control_filename = "control.mp4"
+                _add_video_upload(
+                    form,
+                    "control_reference",
+                    control_video,
+                    control_filename,
+                    **MINIMAX_H3_CONTROL_VIDEO_ENCODING,
+                )
+            source_video = control.get("source_video")
+            if source_video is not None:
+                source_filename = "source.mp4"
+                _add_video_upload(
+                    form,
+                    "source_reference",
+                    source_video,
+                    source_filename,
+                    **MINIMAX_H3_CONTROL_VIDEO_ENCODING,
+                )
+            mask = control.get("mask")
+            if mask is not None:
+                mask_filename = "mask.png"
+                form.add_field(
+                    "mask_reference",
+                    mask_tensor_to_png_bytes(mask, mask_filename),
+                    filename=mask_filename,
+                    content_type="image/png",
+                )
+            mask_video = control.get("mask_video")
+            if mask_video is not None:
+                mask_filename = "mask.mp4"
+                _add_video_upload(
+                    form,
+                    "mask_reference",
+                    mask_video,
+                    mask_filename,
+                    **MINIMAX_H3_CONTROL_VIDEO_ENCODING,
+                )
+            extra_params = {
+                **extra_params,
+                control_type: {"control_context_scale": control["control_context_scale"]},
+            }
 
         # === model specific params. Either use a specialized builder, or add flattened fields as-is ===
         model_params_type = None
