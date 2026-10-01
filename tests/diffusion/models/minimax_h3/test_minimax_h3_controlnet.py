@@ -714,3 +714,17 @@ def test_encoder_conditioning_keeps_control_separate_from_latent_edit(monkeypatc
     assert context["control_context_scale"] == 0.5
     assert context["video_edit_clean_rows"] is None
     assert context["audio_edit_clean_rows"] is None
+
+    # A second DiT pass must not reuse control rows encoded for a smaller canvas.
+    target = pipeline_module.MiniMaxH3LatentUpscaleTarget(latent_height=4, latent_width=4, scale=2.0)
+    refine = pipeline_module.MiniMaxH3LatentRefineSpec(strength=0.4)
+    pipeline._resolve_latent_upscale = lambda *args, **kwargs: target
+    pipeline._resolve_latent_refine = lambda extra: refine
+    with pytest.raises(pipeline_module.OmniClientError, match="first-pass canvas"):
+        pipeline._prepare_encoder_conditioning_inputs(conditioning, sampling)
+
+    target = pipeline_module.MiniMaxH3LatentUpscaleTarget(latent_height=2, latent_width=2, scale=1.0)
+    same_canvas = pipeline._prepare_encoder_conditioning_inputs(conditioning, sampling)
+    assert same_canvas["control_rows"] is rows
+    assert same_canvas["latent_upscale"] is target
+    assert same_canvas["latent_refine"] is refine
