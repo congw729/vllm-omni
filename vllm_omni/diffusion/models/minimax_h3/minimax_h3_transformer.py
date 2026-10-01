@@ -29,9 +29,7 @@ from vllm_omni.diffusion.distributed.sp_plan import (
     SequenceParallelInput,
     SequenceParallelOutput,
 )
-from vllm_omni.diffusion.layers.indexed_modulation import (
-    indexed_scale_shift_,
-)
+from vllm_omni.diffusion.layers.indexed_modulation import indexed_scale_shift_
 from vllm_omni.diffusion.models.host_weight_contract import FinalLayoutModelContract
 from vllm_omni.platforms import current_omni_platform
 
@@ -79,7 +77,6 @@ MINIMAX_H3_FP32_PARAM_NAMES = frozenset(
     }
 )
 MINIMAX_H3_FP32_BUFFER_NAMES = frozenset({"rope.inv_freq"})
-
 _LOCAL_SP_PREPARE_HOOK = "sp_input---local_sp_prepare"
 
 
@@ -1050,9 +1047,6 @@ class MiniMaxH3DiTModel(nn.Module):
             local_span=local_span,
         )
 
-        if getattr(self, "adaln_cache", None) is not None:
-            self.adaln_cache.prepare(t_emb)
-
         combined_indices = (inverse_indices * MINIMAX_H3_ADALN_MODALITY_NUM + token_tags.clamp(min=0)).to(device)
         inverse_indices = inverse_indices.to(device)
 
@@ -1084,9 +1078,9 @@ class MiniMaxH3DiTModel(nn.Module):
             if local_len != seq_len or hidden.shape[0] != seq_len or num_requests != 1:
                 raise ValueError("H3 control supports a single request without sequence parallelism")
             # VideoX-Fun's control forward rounds the shared timestep embedding
-            # to the packed-stream dtype BEFORE AdaLN's SiLU. Both the control
-            # and main blocks, including the final head, consume this same
-            # embedding. Preserve Omni's FP32 baseline when control is bypassed.
+            # to the packed-stream dtype before AdaLN's SiLU. Both branches and
+            # the final head consume the same embedding. Keep the baseline FP32
+            # path unchanged when control is absent or has zero strength.
             t_emb = t_emb.to(hidden.dtype)
             hints = self.controlnet(
                 hidden,
@@ -1101,6 +1095,9 @@ class MiniMaxH3DiTModel(nn.Module):
                 packed_total=seq_len,
                 num_requests=num_requests,
             )
+        if getattr(self, "adaln_cache", None) is not None:
+            self.adaln_cache.prepare(t_emb)
+
         for block_index, block in enumerate(self.blocks):
             hidden = block(
                 hidden,

@@ -838,7 +838,7 @@ Set local checkpoint paths and start the control-enabled server:
 export MODEL=/path/to/MiniMax-H3/FL2VA
 export CONTROL_MODEL=/path/to/MiniMax-H3-Fun-Controlnet-Union.safetensors
 CUDA_VISIBLE_DEVICES=0,1 VLLM_WORKER_MULTIPROC_METHOD=spawn \
-vllm serve "$MODEL" --omni --trust-remote-code --task-type fl2va \
+vllm serve "$MODEL" --omni --task-type fl2va --trust-remote-code \
   --served-model-name MiniMaxAI/MiniMax-H3 --host 127.0.0.1 --port 8092 \
   --controlnet-model-path "$CONTROL_MODEL" \
   --num-gpus 2 --tensor-parallel-size 2 --text-encoder-tp-size 2 \
@@ -847,7 +847,7 @@ vllm serve "$MODEL" --omni --trust-remote-code --task-type fl2va \
 ```
 
 The initial control path uses resident BF16 weights and tensor parallelism.
-Reference/keyframe conditioning, sequence parallelism, cache acceleration and
+Reference/keyframe conditioning, sequence parallelism, approximate cache acceleration and
 quantized control execution require separate support; do not combine them with
 this configuration. Control/Turbo combinations need their own validation and
 are not established by ordinary H3 Turbo results.
@@ -916,9 +916,13 @@ inpainting also completed with the native
 positions / 4 denoiser forwards, video/audio shifts 6/3, guidance 1, adapter
 scale 1, seed 1101, 1344x768, 124 frames and 24 FPS.
 
+These checks predate the step-count alignment: the recorded Base requests used
+40 sigma positions / 39 denoiser forwards. The current examples above use
+40 forwards; use `num_inference_steps=39` to match that earlier Base comparison.
+
 To reproduce that Turbo comparison, add `--lora-backend peft --lora-path "$TURBO_LORA"`
 at startup and activate the same artifact in the request, following the
-[LoRA contract](#lora). Change the request to `num_inference_steps=5`,
+[LoRA contract](#lora). Change the request to `num_inference_steps=4`,
 `flow_shift=6`, and add:
 
 ```bash
@@ -934,12 +938,14 @@ the same-seed control-disabled sample. This remained after matching the
 reference timestep precision and correcting container timestamp rounding.
 A Base 40-step Canny comparison restored the audio signal level, but a
 final-code Base 40-step inpainting sample was also nearly silent. Base
-inpainting therefore is not established as a workaround. Audio quality
-validation remains incomplete for these combinations; an independent
-reference-runtime comparison is needed before attributing the limitation
-to the model or the integration. These checks establish those two request paths,
+inpainting therefore is not established as a workaround. A same-input comparison
+with the pinned VideoX-Fun reference runtime also produced nearly silent Base
+inpainting audio and no requested footbridge in the inspected frames. These
+results are not unique to the Omni API path, but do not isolate a checkpoint,
+training, or integration defect. Audio quality validation remains incomplete.
+These checks establish those two request paths,
 not an exhaustive quality evaluation of all hint types or Turbo variants. The
-40-step examples above follow the original control recipe. This does not
+40-forward examples above use the current API step-count convention. This does not
 claim exhaustive coverage of all Base or Turbo conditioning combinations.
 
 Four additional real-model API smokes used synthetic analytic Depth, HED,
@@ -1267,14 +1273,14 @@ rejected.
 
 | Artifact | Task | Forwards | `num_inference_steps` | `flow_shift` | declared `alpha` |
 | --- | --- | ---: | ---: | ---: | ---: |
-| `minimax_h3_fl2v_turbo_4step_v0.1.safetensors` | T2VA / FL2VA | 4 | 5 | 12 | none -> 8 |
-| `minimax_h3_fl2v_turbo_4step_v1.0_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 5 | 6 | 128 |
-| `minimax_h3_fl2v_turbo_4step_v1.1_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 5 | 6 | 128 |
-| `minimax_h3_fl2v_turbo_4step_v1.2_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 5 | 6 | 8 |
-| `minimax_h3_fl2v_turbo_8step_v1.0_bf16.safetensors` | T2VA / FL2VA | 8 | 9 | 12 | 8 |
-| `minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors` | T2VA / FL2VA | 8 | 9 | 6 | 8 |
-| `minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors` | Ref2VA | 4 | 5 | 12 | 8 |
-| `minimax_h3_ref2v_turbo_8step_v1.0_768p_bf16.safetensors` | Ref2VA | 8 | 9 | 6 | 8 |
+| `minimax_h3_fl2v_turbo_4step_v0.1.safetensors` | T2VA / FL2VA | 4 | 4 | 12 | none -> 8 |
+| `minimax_h3_fl2v_turbo_4step_v1.0_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 4 | 6 | 128 |
+| `minimax_h3_fl2v_turbo_4step_v1.1_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 4 | 6 | 128 |
+| `minimax_h3_fl2v_turbo_4step_v1.2_768p_bf16.safetensors` | T2VA / FL2VA | 4 | 4 | 6 | 8 |
+| `minimax_h3_fl2v_turbo_8step_v1.0_bf16.safetensors` | T2VA / FL2VA | 8 | 8 | 12 | 8 |
+| `minimax_h3_fl2v_turbo_8step_v1.0_768p_bf16.safetensors` | T2VA / FL2VA | 8 | 8 | 6 | 8 |
+| `minimax_h3_ref2v_turbo_4step_v0.1_bf16.safetensors` | Ref2VA | 4 | 4 | 12 | 8 |
+| `minimax_h3_ref2v_turbo_8step_v1.0_768p_bf16.safetensors` | Ref2VA | 8 | 8 | 6 | 8 |
 
 `audio_flow_shift` is `3.0` across the family. Each row is the complete
 published filename; use it verbatim as `TURBO_FILE` below.
@@ -1326,7 +1332,7 @@ Start from a non-offloaded or DLO FL2VA server command and add
 carry that artifact's sampling settings:
 
 ```bash
--F 'num_inference_steps=5' \
+-F 'num_inference_steps=4' \
 -F 'flow_shift=6' \
 -F 'extra_params={"task":"t2va","duration":4.4,"audio_flow_shift":3.0}' \
 -F "lora={\"name\":\"h3-turbo-v1.0\",\"path\":\"${TURBO_LORA}\",\"scale\":1.0}"
@@ -1334,7 +1340,7 @@ carry that artifact's sampling settings:
 
 Switching to another FL2VA artifact means repointing `TURBO_FILE`, which moves
 both `--lora-path` and the request's `lora.path`, and carrying that row's
-`num_inference_steps` and `flow_shift`: `9` and `6` for `8step_v1.0_768p`, `9`
+`num_inference_steps` and `flow_shift`: `8` and `6` for `8step_v1.0_768p`, `8`
 and `12` for the 544p `8step_v1.0`. A request that does not match the loaded
 artifact is rejected, so a mismatch cannot silently degrade output.
 

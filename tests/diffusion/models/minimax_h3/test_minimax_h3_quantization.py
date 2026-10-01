@@ -143,13 +143,13 @@ def test_explicit_native_weight_format_overrides_diffusers_class_name(monkeypatc
     from vllm_omni.diffusion.models.minimax_h3 import minimax_h3_blocks as blocks
     from vllm_omni.diffusion.models.minimax_h3 import minimax_h3_transformer as h3
 
-    monkeypatch.setattr(h3, "ColumnParallelLinear", _FakeLinear)
-    monkeypatch.setattr(h3, "RowParallelLinear", _FakeLinear)
     monkeypatch.setattr(blocks, "ColumnParallelLinear", _FakeLinear)
     monkeypatch.setattr(blocks, "MergedColumnParallelLinear", _FakeLinear)
     monkeypatch.setattr(blocks, "QKVParallelLinear", _FakeLinear)
     monkeypatch.setattr(blocks, "RowParallelLinear", _FakeLinear)
     monkeypatch.setattr(blocks, "Attention", _FakeAttention)
+    monkeypatch.setattr(h3, "ColumnParallelLinear", _FakeLinear)
+    monkeypatch.setattr(h3, "RowParallelLinear", _FakeLinear)
     monkeypatch.setattr(h3, "get_tensor_model_parallel_world_size", lambda: 1)
 
     model = h3.MiniMaxH3DiTModel(

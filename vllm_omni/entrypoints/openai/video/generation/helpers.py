@@ -719,7 +719,10 @@ def _validate_h3_control_uploads(
     if selected == "inpaint" and mask_reference is None:
         reject("control_type=inpaint requires mask_reference.")
     if has_references:
-        reject("MiniMax H3 control cannot be combined with input/image/video/audio references or keyframes.")
+        reject(
+            "MiniMax H3 control cannot be combined with input/image/video/audio references, "
+            "keyframes, or latent-mask editing."
+        )
     config = extras.get(selected, {})
     if not isinstance(config, Mapping):
         reject(f"extra_params.{selected} must be an object.")
@@ -1096,7 +1099,8 @@ async def _parse_video_form(
                     parsed_video_reference,
                     parsed_audio_reference,
                 )
-            ),
+            )
+            or has_latent_edit,
         )
     else:
         if source_reference is not None or mask_reference is not None:

@@ -233,12 +233,14 @@ class OmniOpenAIServingVideo:
 
     def _get_model_architectures(self, od_config: OmniDiffusionConfig | SimpleNamespace | None) -> list[str | None]:
         """Read architecture names from the current config and stage projections."""
-        model_archs = [getattr(od_config, "model_class_name", None)]
+        model_archs = [_config_value(od_config, "model_class_name")]
         for stage_config in self.stage_configs or ():
+            engine_args = _config_value(stage_config, "engine_args", {}) or {}
             model_archs.extend(
                 (
                     _stage_diffusion_model_class_name(stage_config),
-                    _config_value(_config_value(stage_config, "engine_args", {}), "model_class_name"),
+                    _config_value(stage_config, "model_arch"),
+                    _config_value(engine_args, "model_class_name"),
                 )
             )
         return model_archs
@@ -302,8 +304,9 @@ class OmniOpenAIServingVideo:
             )
             architecture = project_get("model_class_name") or get("model_arch")
             if architecture not in {"MiniMaxH3Pipeline", "MiniMaxH3ModularPipeline"}:
-                return False
-            return bool(project_get("controlnet_model_path"))
+                continue
+            if project_get("controlnet_model_path"):
+                return True
         return False
 
     @property

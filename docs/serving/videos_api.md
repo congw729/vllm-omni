@@ -250,7 +250,7 @@ Both `POST /v1/videos` and `POST /v1/videos/sync` accept these multipart fields:
 
 Generated-audio quality validation is incomplete: Turbo control samples and
 a Base inpainting sample were very quiet despite valid audio streams. See
-the [H3 recipe](https://github.com/zhuhu00/vllm-omni/blob/d3efd601a83453af16cd8e1012b2fd7e73363ef9/recipes/MiniMaxAI/MiniMax-H3.md#validation-status) for
+the [H3 recipe](https://github.com/zhuhu00/vllm-omni/blob/07a2ca5eb3e4dc0dba3528d8bf0adc678da5dc6d/recipes/MiniMaxAI/MiniMax-H3.md#validation-status) for
 the tested configuration and current limitations.
 
 The hint type describes supplied pixels. Selecting `pose` does not detect
@@ -305,7 +305,8 @@ do not send an inpainting source via `video_reference`: that role selects
 Ref2VA rather than inpainting.
 
 Each uploaded role has a 512 MiB limit. Empty, oversized, undecodable inputs
-and invalid combinations return HTTP 400 before a job is queued. Media
+and invalid upload-role/control-namespace combinations return HTTP 400 before
+a job is queued. Pipeline-level validation may instead fail a queued job. Media
 validation inspects a bounded prefix; decoder errors later in a stream may
 still fail the generation job. The server owns
 the temporary upload paths and releases them on completion, failure, or

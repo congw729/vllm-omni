@@ -46,7 +46,12 @@ class CPUAttention(nn.Module):
 def cpu_layers(monkeypatch):
     monkeypatch.setattr(blocks, "Attention", CPUAttention)
     with ExitStack() as stack:
-        for module in ("vllm.model_executor.layers.linear", "vllm.model_executor.parameter", h3.__name__):
+        for module in (
+            "vllm.distributed",
+            "vllm.model_executor.layers.linear",
+            "vllm.model_executor.parameter",
+            h3.__name__,
+        ):
             for name, value in (("get_tensor_model_parallel_world_size", 1), ("get_tensor_model_parallel_rank", 0)):
                 stack.enter_context(patch(module + "." + name, return_value=value, create=True))
         yield
@@ -321,6 +326,7 @@ def test_lossless_temporal_mask_sampling(tmp_path):
     assert pixels[0, 0, :, 0, 0].tolist() == [0, 0, 1, 1, 1]
 
 
+@torch.no_grad()
 def test_transformer_baseline_zero_strength_and_request_isolation(cpu_layers):
     arch = tiny_arch()
     config = SimpleNamespace(
@@ -371,6 +377,13 @@ def test_transformer_baseline_zero_strength_and_request_isolation(cpu_layers):
     assert adaln_dtypes == [torch.bfloat16] * 5  # control + main blocks and final head
     adaln_dtypes.clear()
     assert not torch.equal(before[0], controlled[0])
+    hits = model.adaln_cache.hits
+    cached_controlled = model(**kwargs, control_rows=rows, control_context_scale=1)
+    assert model.adaln_cache.hits > hits
+    assert adaln_dtypes == [torch.bfloat16] * 5
+    for expected, actual in zip(controlled, cached_controlled, strict=True):
+        torch.testing.assert_close(actual, expected, atol=0, rtol=0)
+    adaln_dtypes.clear()
     after = model(**kwargs)
     assert adaln_dtypes == [torch.float32] * 3
     for expected, actual in zip(before, after, strict=True):

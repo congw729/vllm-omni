@@ -202,8 +202,8 @@ def test_native_constructor_enables_cache_by_default(monkeypatch, tp_size):
         _small_od_config,
     )
 
-    monkeypatch.setattr(h3, "ColumnParallelLinear", _FakeLinear)
-    monkeypatch.setattr(h3, "RowParallelLinear", _FakeLinear)
+    for name in ("ColumnParallelLinear", "RowParallelLinear"):
+        monkeypatch.setattr(h3, name, _FakeLinear)
     for name in ("ColumnParallelLinear", "RowParallelLinear", "MergedColumnParallelLinear", "QKVParallelLinear"):
         monkeypatch.setattr(blocks, name, _FakeLinear)
     monkeypatch.setattr(blocks, "Attention", _FakeAttention)
