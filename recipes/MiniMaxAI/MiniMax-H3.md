@@ -852,6 +852,13 @@ quantized control execution require separate support; do not combine them with
 this configuration. Control/Turbo combinations need their own validation and
 are not established by ordinary H3 Turbo results.
 
+Active control conditioning cannot be reused in a `latent_refine` pass at a
+larger canvas after `latent_upscale`: its hint/source/mask rows still describe
+the first-pass resolution. That combination is rejected before denoising.
+Upscaling without refinement, same-canvas refinement and zero-strength requests
+retain their existing execution paths; control quality for these combinations
+has not been validated.
+
 Upload a prepared Canny video through the existing control API:
 
 ```bash

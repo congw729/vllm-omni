@@ -250,7 +250,7 @@ Both `POST /v1/videos` and `POST /v1/videos/sync` accept these multipart fields:
 
 Generated-audio quality validation is incomplete: Turbo control samples and
 a Base inpainting sample were very quiet despite valid audio streams. See
-the [H3 recipe](https://github.com/zhuhu00/vllm-omni/blob/07a2ca5eb3e4dc0dba3528d8bf0adc678da5dc6d/recipes/MiniMaxAI/MiniMax-H3.md#validation-status) for
+the [H3 recipe](https://github.com/zhuhu00/vllm-omni/blob/702c4fabdc04a4146be94d1e5c6b2227f355ab13/recipes/MiniMaxAI/MiniMax-H3.md#validation-status) for
 the tested configuration and current limitations.
 
 The hint type describes supplied pixels. Selecting `pose` does not detect

@@ -2997,6 +2997,15 @@ class MiniMaxH3Pipeline(
         )
         latent_refine = self._resolve_latent_refine(extra)
         if latent_refine is not None:
+            if (
+                control_rows is not None
+                and upscale_target is not None
+                and (upscale_target.height, upscale_target.width) != (conditioning.height, conditioning.width)
+            ):
+                raise OmniClientError(
+                    "H3 control conditioning uses the first-pass canvas; latent_refine cannot change its resolution. "
+                    "Disable latent_refine or keep the base canvas."
+                )
             if continuation is not None:
                 raise OmniClientError("MiniMax H3 latent_refine does not support latent-tail continuation")
             if conditioning.video_edit_clean_rows is not None or conditioning.audio_edit_clean_rows is not None:
