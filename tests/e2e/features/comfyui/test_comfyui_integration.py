@@ -33,6 +33,7 @@ from comfyui_vllm_omni.nodes import (
     VLLMOmniGenerateImage,
     VLLMOmniGenerateMusic,
     VLLMOmniGenerateVideo,
+    VLLMOmniLatentMaskEditing,
     VLLMOmniMiniMaxH3Control,
     VLLMOmniTTS,
     VLLMOmniUnderstanding,
@@ -1563,3 +1564,52 @@ async def test_video_generation_node_minimax_h3_control_route(
     assert isinstance(result[0], VideoInput)
     persisted_paths = h3_control_paths.get(timeout=5)
     assert all(not Path(path).exists() for path in persisted_paths)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "server_case",
+    [
+        pytest.param(
+            ServerCase(
+                served_model="MiniMaxAI/MiniMax-H3",
+                stage_list=["diffusion"],
+                stage_configs=[H3_STAGE_CONFIG],
+                outputs=[_build_diffusion_video_output()],
+            ),
+            id="minimax-h3",
+        ),
+    ],
+    indirect=True,
+)
+@pytest.mark.parametrize(
+    "sampling_case",
+    [pytest.param(SamplingCase(kind=SamplingKind.VIDEO_NONE, sampling_params=None), id="latent-mask")],
+    indirect=True,
+)
+async def test_video_generation_node_minimax_h3_latent_mask_editing(api_server: str, sampling_case: SamplingCase):
+    """Latent-mask editing: the raw video/audio masks must be accepted by the real /v1/videos form parser."""
+    mask_node = VLLMOmniLatentMaskEditing()
+    (latent_edit,) = mask_node.get_latent_edit(
+        source_video=VideoInput(b"mock-source-video"),
+        video_mask=torch.zeros((VIDEO_HEIGHT, VIDEO_WIDTH), dtype=torch.float32),
+        audio_mask=0.5,
+    )
+
+    node = VLLMOmniGenerateVideo()
+    result = await node.generate(
+        url=api_server,
+        model="MiniMaxAI/MiniMax-H3",
+        prompt="Restyle the clip.",
+        negative_prompt="",
+        width=VIDEO_WIDTH,
+        height=VIDEO_HEIGHT,
+        fps=VIDEO_FPS,
+        duration=VIDEO_DURATION,
+        model_params=H3_MODEL_PARAMS,
+        latent_edit=latent_edit,
+    )
+
+    assert isinstance(result, tuple)
+    assert len(result) == 1
+    assert isinstance(result[0], VideoInput)

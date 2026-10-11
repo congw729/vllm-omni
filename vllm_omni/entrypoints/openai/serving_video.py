@@ -295,17 +295,13 @@ class OmniOpenAIServingVideo:
         for stage in stages or []:
             if get_stage_type(stage) != "diffusion":
                 continue
-            get = stage.get if isinstance(stage, Mapping) else lambda key: getattr(stage, key, None)
-            projection = get("diffusion_config")
+            projection = _config_value(stage, "diffusion_config")
             if projection is None:
-                projection = get("engine_args") or {}
-            project_get = (
-                projection.get if isinstance(projection, Mapping) else lambda key: getattr(projection, key, None)
-            )
-            architecture = project_get("model_class_name") or get("model_arch")
+                projection = _config_value(stage, "engine_args") or {}
+            architecture = _config_value(projection, "model_class_name") or _config_value(stage, "model_arch")
             if architecture not in {"MiniMaxH3Pipeline", "MiniMaxH3ModularPipeline"}:
                 continue
-            if project_get("controlnet_model_path"):
+            if _config_value(projection, "controlnet_model_path"):
                 return True
         return False
 
@@ -381,7 +377,12 @@ class OmniOpenAIServingVideo:
             )
             vp.width = vp.width or video_defaults.width
             vp.height = vp.height or video_defaults.height
-            if num_frames_provided and vp.num_frames != video_defaults.num_frames:
+            # Only fixed-duration pipelines (those declaring
+            # ``duration_seconds``, e.g. MAGI-2) pin the frame count; models
+            # that merely publish serving defaults (e.g. Kandinsky 6, any
+            # 4k+1 frame count) still accept an explicit ``num_frames``.
+            fixed_frame_count = video_defaults.duration_seconds is not None
+            if fixed_frame_count and num_frames_provided and vp.num_frames != video_defaults.num_frames:
                 raise HTTPException(
                     status_code=HTTPStatus.BAD_REQUEST.value,
                     detail=(f"This diffusion model requires {video_defaults.num_frames} frames; got {vp.num_frames}."),

@@ -31,7 +31,7 @@ from .format import (
     video_to_base64,
     video_to_bytes,
 )
-from .latent_mask import scalar_mask_to_json, video_mask_to_grid_json
+from .latent_mask import scalar_mask_to_json, video_mask_to_json
 from .logger import get_logger, pretty_printer
 from .models import lookup_model_spec, lookup_params_builder
 from .types import (
@@ -428,6 +428,15 @@ class VLLMOmniClient:
                 content_type="image/png",
             )
 
+        if len(keyframe_images) == 2:
+            for image_filename, image in keyframe_images:
+                form.add_field(
+                    "input_references",
+                    image_tensor_to_png_bytes(image, image_filename),
+                    filename=image_filename,
+                    content_type="image/png",
+                )
+
         # === latent-mask editing (MiniMax H3) ===
         if latent_edit is not None:
             source_video = latent_edit.get("source_video")
@@ -438,21 +447,16 @@ class VLLMOmniClient:
             if video_mask is None and audio_mask is None:
                 raise ValueError("Latent-mask editing requires at least one mask.")
 
-            video_mask_trivial = video_mask is None or bool((video_mask == 1.0).all().item())
-            audio_mask_trivial = audio_mask is None or audio_mask == 1.0
-            if not video_mask_trivial and source_video is None:
-                raise ValueError("A non-trivial video mask requires a source video.")
-            if not audio_mask_trivial and source_audio is None and source_video is None:
-                raise ValueError("A non-trivial audio mask requires a source audio or a source video with audio.")
-
             if source_video is not None:
                 form.add_field(
                     "source_video",
-                    video_to_bytes(source_video, "source.mp4"),
+                    video_to_bytes(source_video),
                     filename="source.mp4",
                     content_type="video/mp4",
                 )
             if source_audio is not None:
+                # The filename extension selects the audio codec (mp3), so it is
+                # meaningful even though aiohttp uses the explicit filename below.
                 form.add_field(
                     "source_audio",
                     audio_to_bytes(source_audio, "source_audio.mp3"),
@@ -460,7 +464,7 @@ class VLLMOmniClient:
                     content_type="audio/mpeg",
                 )
             if video_mask is not None:
-                mask_json = video_mask_to_grid_json(video_mask, width=width, height=height, num_frames=num_frames)
+                mask_json = video_mask_to_json(video_mask)
                 form.add_field(
                     "video_noise_mask",
                     mask_json.encode("utf-8"),
@@ -475,14 +479,6 @@ class VLLMOmniClient:
                     content_type="application/json",
                 )
 
-        if len(keyframe_images) == 2:
-            for image_filename, image in keyframe_images:
-                form.add_field(
-                    "input_references",
-                    image_tensor_to_png_bytes(image, image_filename),
-                    filename=image_filename,
-                    content_type="image/png",
-                )
         if control is not None:
             control_type = control["control_type"]
             form.add_field("control_type", control_type)

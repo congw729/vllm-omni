@@ -37,7 +37,6 @@ from .comfyui_vllm_omni.nodes import (
 
 # A dictionary that contains all nodes you want to export with their names
 NODE_CLASS_MAPPINGS = {
-    "VLLMOmniMiniMaxH3TemporalMask": VLLMOmniMiniMaxH3TemporalMask,
     # === Generation ===
     "VLLMOmniGenerateImage": VLLMOmniGenerateImage,
     "VLLMOmniGenerateVideo": VLLMOmniGenerateVideo,
@@ -48,6 +47,7 @@ NODE_CLASS_MAPPINGS = {
     "VLLMOmniVideoReferences": VLLMOmniVideoReferences,
     "VLLMOmniLatentMaskEditing": VLLMOmniLatentMaskEditing,
     "VLLMOmniMiniMaxH3Control": VLLMOmniMiniMaxH3Control,
+    "VLLMOmniMiniMaxH3TemporalMask": VLLMOmniMiniMaxH3TemporalMask,
     # === Params ===
     "VLLMOmniARSampling": VLLMOmniARSampling,
     "VLLMOmniDiffusionSampling": VLLMOmniDiffusionSampling,
@@ -61,7 +61,6 @@ NODE_CLASS_MAPPINGS = {
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "VLLMOmniMiniMaxH3TemporalMask": "MiniMax-H3 Temporal Mask",
     # === Generation ===
     "VLLMOmniGenerateImage": "Generate Image",
     "VLLMOmniGenerateVideo": "Generate Video",
@@ -72,6 +71,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VLLMOmniVideoReferences": "Video References",
     "VLLMOmniLatentMaskEditing": "Latent Mask Editing",
     "VLLMOmniMiniMaxH3Control": "MiniMax-H3 Control",
+    "VLLMOmniMiniMaxH3TemporalMask": "MiniMax-H3 Temporal Mask",
     # === Params ===
     "VLLMOmniARSampling": "AR Sampling Params",
     "VLLMOmniDiffusionSampling": "Diffusion Sampling Params",
