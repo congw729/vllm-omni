@@ -618,6 +618,7 @@ def test_control_rows_and_padded_sequence_survive_denoise_preparation():
         visual_condition_shapes=None,
         audio_condition_lengths=None,
         keyframe_frame_indices=None,
+        guide_blocks=None,
         control_rows=control_rows,
         control_context_scale=0.75,
         pad_seq_len=192,
@@ -650,6 +651,7 @@ def test_control_rejects_external_vae_encoder_before_weight_loading(control_star
 
 def test_encoder_conditioning_keeps_control_separate_from_latent_edit(monkeypatch):
     from vllm_omni.diffusion.models.minimax_h3 import pipeline_minimax_h3 as pipeline_module
+    from vllm_omni.model_executor.models.minimax_h3.conditioning import MiniMaxH3EncoderConditioning
 
     pipeline = object.__new__(pipeline_module.MiniMaxH3Pipeline)
     nn.Module.__init__(pipeline)
@@ -677,7 +679,7 @@ def test_encoder_conditioning_keeps_control_separate_from_latent_edit(monkeypatc
 
     num_frames = 5
     planner = pipeline_module.MINIMAX_H3_SHAPE_PLANNER
-    conditioning = SimpleNamespace(
+    conditioning = MiniMaxH3EncoderConditioning(
         task="t2va",
         height=32,
         width=32,

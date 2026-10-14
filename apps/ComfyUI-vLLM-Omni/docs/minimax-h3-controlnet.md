@@ -128,6 +128,7 @@ Structural modes can also use `source_video` plus one mask. A connected source
 requires a mask. Inpaint requires a mask and can optionally also accept a
 prepared control video. Use one mask input at a time. Keep `frame` and
 `references` disconnected when Control is connected.
+Timeline guides cannot be combined with ControlNet requests.
 
 ## Prepared Depth, HED and MLSD examples
 

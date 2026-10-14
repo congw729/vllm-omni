@@ -334,3 +334,36 @@ def test_single_stage_control_reaches_denoise_after_local_encoding(pipeline, moc
         torch.testing.assert_close(rows[:, :96], torch.ones_like(rows[:, :96]))
         torch.testing.assert_close(rows[:, 96:], torch.zeros_like(rows[:, 96:]))
         load_pixels.assert_called_once_with("hint.mp4", height=32, width=32, num_frames=107, mask=False)
+
+
+@pytest.mark.parametrize("scale", [0.0, 1.0])
+def test_control_rejects_timeline_guides_before_control_encoding(pipeline, mocker, scale):
+    from vllm_omni.diffusion.models.minimax_h3.time_request import MINIMAX_H3_SHAPE_PLANNER
+
+    pipeline.od_config.controlnet_model_path = "control.safetensors"
+    request = _request("t2va")
+    request.sampling_params.quality = "lossless"
+    request.sampling_params.extra_args["canny"] = {
+        "control_path": "hint.mp4",
+        "control_context_scale": scale,
+    }
+    request.prompts[0]["multi_modal_data"] = {
+        "timeline_guides": [{"frame_index": 0, "image": Image.new("RGB", (256, 256))}]
+    }
+    load_pixels = mocker.patch(
+        "vllm_omni.diffusion.models.minimax_h3.pipeline_minimax_h3.load_control_pixels",
+        side_effect=lambda _path, *, height, width, num_frames, mask: torch.zeros(1, 3, num_frames, height, width),
+    )
+    pipeline.video_vae.encode_control_latents.side_effect = lambda pixels: torch.ones(
+        1,
+        24,
+        MINIMAX_H3_SHAPE_PLANNER.video_latent_t(pixels.shape[2]),
+        pixels.shape[3] // 16,
+        pixels.shape[4] // 16,
+    )
+
+    with pytest.raises(OmniClientError, match="control.*timeline guides"):
+        pipeline.forward(request)
+
+    load_pixels.assert_not_called()
+    pipeline.diffuse.assert_not_called()
