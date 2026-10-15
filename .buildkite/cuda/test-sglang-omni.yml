@@ -12,7 +12,7 @@ steps:
     agents:
       queue: medium_cpu_queue_premerge
 
-  - label: ":speaker: SGLang-Omni · Qwen3-TTS Base · Latency"
+  - label: ":speaker: SGLang-Omni · Qwen3-TTS Base · 2-GPU Latency"
     key: nightly-sglang-omni-qwen3-tts
     depends_on: image-build-sglang-omni
     timeout_in_minutes: 90
@@ -35,7 +35,7 @@ steps:
               - image: "936637512419.dkr.ecr.us-west-2.amazonaws.com/vllm-ci-pull-through-cache/q9t5s3a7/vllm-ci-test-repo:${BUILDKITE_COMMIT}-sglang-omni"
                 resources:
                   limits:
-                    nvidia.com/gpu: 1
+                    nvidia.com/gpu: 2
                 volumeMounts:
                   - name: devshm
                     mountPath: /dev/shm

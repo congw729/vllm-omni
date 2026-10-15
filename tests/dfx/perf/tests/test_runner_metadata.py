@@ -67,7 +67,7 @@ def test_explicit_sglang_config_uses_shared_marks(monkeypatch):
     assert module["SERVER_TYPE"] == "sglang-omni"
     assert len(module["paired_benchmark_params"]) == 1
     names = {mark.name for mark in module["paired_benchmark_params"][0].marks}
-    assert {"gpu", "cuda", "H100", "cards_1", "full_model", "tts"} <= names
+    assert {"gpu", "cuda", "H100", "cards_2", "full_model", "tts"} <= names
 
 
 def test_sglang_uses_common_client_metadata(monkeypatch):

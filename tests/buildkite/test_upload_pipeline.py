@@ -116,7 +116,20 @@ def test_backend_comparison_pipeline_has_only_required_jobs() -> None:
     assert benchmark["artifact_paths"] == ["tests/dfx/perf/results/*.json"]
     container = benchmark["plugins"][0]["kubernetes"]["podSpec"]["containers"][0]
     assert container["image"].endswith("${BUILDKITE_COMMIT}-sglang-omni")
-    assert container["resources"]["limits"]["nvidia.com/gpu"] == 1
+    assert container["resources"]["limits"]["nvidia.com/gpu"] == 2
+
+
+def test_backend_comparison_deploy_uses_both_requested_gpus() -> None:
+    configs = yaml.safe_load(Path("tests/dfx/perf/tests/test_qwen3_tts_sglang.json").read_text())
+    assert len(configs) == 1
+    config = configs[0]
+    hardware = next(mark["hardware_marks"] for mark in config["mark"] if isinstance(mark, dict))
+    assert hardware == {"res": {"cuda": "H100"}, "num_cards": 2}
+    deploy = yaml.safe_load(Path(config["server_params"]["serve_args"]["config"]).read_text())
+    assert deploy["config_cls"] == "Qwen3TTSPipelineConfig"
+    assert deploy["model_path"] == config["server_params"]["model"]
+    assert deploy["stages"]["tts_engine"] == {"process": "pipeline", "gpu": 0}
+    assert deploy["stages"]["vocoder"] == {"process": "vocoder", "gpu": 1}
 
 
 def test_backend_comparison_labels_skip_npu_entry_only_for_prs() -> None:
