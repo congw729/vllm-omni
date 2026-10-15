@@ -69,25 +69,51 @@ def test_bootstrap_steps_loaded_from_file() -> None:
     assert "placeholder:" not in steps
 
 
-def test_backend_comparison_label_keeps_cuda_upload_dependencies() -> None:
+def test_backend_comparison_entry_excludes_regular_cuda_pipeline() -> None:
+    entry = yaml.safe_load(Path(".buildkite/cuda/pipeline.yml").read_text())
+    steps = {step["key"]: step for step in entry["steps"]}
+    assert set(steps) == {"upload-ci-pipeline", "upload-backend-comparison"}
+    regular = steps["upload-ci-pipeline"]
+    comparison = steps["upload-backend-comparison"]
+    # Complementary gates: other PR labels cannot enable both routes, and main
+    # keeps its regular scheduled/post-merge pipeline even with the label present.
+    assert regular["if"] == (
+        'build.branch == "main" || !(build.pull_request.labels includes "backend-comparison-test")'
+    )
+    assert comparison["if"] == (
+        'build.branch != "main" && build.pull_request.labels includes "backend-comparison-test"'
+    )
+    assert regular["commands"] == [
+        "python3 .buildkite/common/scripts/upload_pipeline.py --upload .buildkite/cuda/bootstrap-upload-steps.yml"
+    ]
+    assert comparison["commands"] == ["buildkite-agent pipeline upload .buildkite/cuda/test-sglang-omni.yml"]
+    assert "depends_on" not in comparison
+    assert comparison["agents"] == {"queue": "medium_cpu_queue_premerge"}
+
+
+@pytest.mark.parametrize(
+    "changed_file",
+    [".buildkite/cuda/test-nightly.yml", "tests/dfx/perf/scripts/run_benchmark.py", "docs/foo.md"],
+)
+def test_regular_cuda_uploads_do_not_include_backend_comparison(changed_file: str) -> None:
     rendered = _render_bootstrap_pipeline(
         _load_bootstrap_steps(CUDA_BOOTSTRAP_STEPS),
-        decision=resolve_ci_decision([".buildkite/cuda/test-nightly.yml"]),
+        decision=resolve_ci_decision([changed_file]),
         path=CUDA_BOOTSTRAP_STEPS,
     )
-    steps = {step["key"]: step for step in yaml.safe_load(rendered)["steps"]}
-    for key in ("image-build", "upload-nightly-pipeline"):
-        assert 'labels includes "backend-comparison-test"' in steps[key]["if"]
-    assert steps["upload-nightly-pipeline"]["depends_on"] == "image-build"
+    assert "backend-comparison-test" not in rendered
+    assert "test-sglang-omni.yml" not in NIGHTLY_YAML.read_text()
 
-    nightly = yaml.safe_load(NIGHTLY_YAML.read_text())
-    upload = next(step for step in nightly["steps"] if step.get("key") == "nightly-sglang-omni-comparison")
-    assert upload["depends_on"] == "upload-nightly-pipeline"
-    assert 'labels includes "backend-comparison-test"' in upload["if"]
-    assert upload["commands"] == ["buildkite-agent pipeline upload .buildkite/cuda/test-sglang-omni.yml"]
+
+def test_backend_comparison_pipeline_has_only_required_jobs() -> None:
     comparison = yaml.safe_load(Path(".buildkite/cuda/test-sglang-omni.yml").read_text())
+    assert len(comparison["steps"]) == 2
     build, benchmark = comparison["steps"]
+    assert "depends_on" not in build
     assert benchmark["depends_on"] == build["key"] == "image-build-sglang-omni"
+    assert benchmark["key"] == "nightly-sglang-omni-qwen3-tts"
+    assert "--test-config-file tests/dfx/perf/tests/test_qwen3_tts_sglang.json" in benchmark["commands"][-1]
+    assert benchmark["artifact_paths"] == ["tests/dfx/perf/results/*.json"]
     container = benchmark["plugins"][0]["kubernetes"]["podSpec"]["containers"][0]
     assert container["image"].endswith("${BUILDKITE_COMMIT}-sglang-omni")
     assert container["resources"]["limits"]["nvidia.com/gpu"] == 1

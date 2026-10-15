@@ -528,15 +528,6 @@ steps:
           - pip install "vllm-gguf-plugin==0.0.4"
           - pytest -sv tests/diffusion/quantization -m 'full_model and cuda and L4 and B200 and cards_1' --run-level "full_model"
 
-  - label: ":left_right_arrow: Upload Backend Comparison"
-    key: nightly-sglang-omni-comparison
-    depends_on: upload-nightly-pipeline
-    if: build.branch != "main" && build.pull_request.labels includes "backend-comparison-test"
-    commands:
-      - buildkite-agent pipeline upload .buildkite/cuda/test-sglang-omni.yml
-    agents:
-      queue: medium_cpu_queue_premerge
-
   # NOTE: ":email: Nightly Collection & Email" is deprecated and will be removed soon.
   # Do not add new depends_on entries or extend this step.
   - label: ":email: Nightly Collection & Email"
