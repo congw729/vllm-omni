@@ -172,9 +172,9 @@
         "enable-negative-prompt": true,
         "baseline": {
           "H100": {
-            "throughput_qps": [0.3937, 0.6606, 0.6188, 0.7752],
-            "latency_mean": [2.5466, 3.0235, 6.3948, 10.1944],
-            "peak_memory_mb_mean": [55149.0, 55150.0, 55153.1458, 55156.325]
+            "throughput_qps": [0.3937, 0.6606, 0.6189, 0.7931],
+            "latency_mean": [2.5466, 3.0235, 6.3884, 9.9601],
+            "peak_memory_mb_mean": [55033.0, 55033.0, 55033.6667, 55035.7521]
           }
         }
       }
@@ -331,7 +331,7 @@
           "H100": {
             "throughput_qps": 0.559,
             "latency_mean": 1.794,
-            "peak_memory_mb_mean": 55174.0
+            "peak_memory_mb_mean": 55154.0
           }
         }
       },
