@@ -14,6 +14,7 @@
     ],
     "server_params": {
       "model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      "env": {"SGLANG_OMNI_STARTUP_TIMEOUT": "1800"},
       "serve_args": {
         "config": "tests/dfx/perf/deploy/sgl_qwen3_tts_1_7b.yaml"
       }

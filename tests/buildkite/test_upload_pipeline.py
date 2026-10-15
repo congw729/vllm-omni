@@ -69,6 +69,45 @@ def test_bootstrap_steps_loaded_from_file() -> None:
     assert "placeholder:" not in steps
 
 
+def test_backend_comparison_label_keeps_cuda_upload_dependencies() -> None:
+    rendered = _render_bootstrap_pipeline(
+        _load_bootstrap_steps(CUDA_BOOTSTRAP_STEPS),
+        decision=resolve_ci_decision([".buildkite/cuda/test-nightly.yml"]),
+        path=CUDA_BOOTSTRAP_STEPS,
+    )
+    steps = {step["key"]: step for step in yaml.safe_load(rendered)["steps"]}
+    for key in ("image-build", "upload-nightly-pipeline"):
+        assert 'labels includes "backend-comparison-test"' in steps[key]["if"]
+    assert steps["upload-nightly-pipeline"]["depends_on"] == "image-build"
+
+    nightly = yaml.safe_load(NIGHTLY_YAML.read_text())
+    upload = next(step for step in nightly["steps"] if step.get("key") == "nightly-sglang-omni-comparison")
+    assert upload["depends_on"] == "upload-nightly-pipeline"
+    assert 'labels includes "backend-comparison-test"' in upload["if"]
+    assert upload["commands"] == ["buildkite-agent pipeline upload .buildkite/cuda/test-sglang-omni.yml"]
+    comparison = yaml.safe_load(Path(".buildkite/cuda/test-sglang-omni.yml").read_text())
+    build, benchmark = comparison["steps"]
+    assert benchmark["depends_on"] == build["key"] == "image-build-sglang-omni"
+    container = benchmark["plugins"][0]["kubernetes"]["podSpec"]["containers"][0]
+    assert container["image"].endswith("${BUILDKITE_COMMIT}-sglang-omni")
+    assert container["resources"]["limits"]["nvidia.com/gpu"] == 1
+
+
+def test_backend_comparison_labels_skip_npu_entry_only_for_prs() -> None:
+    entry = yaml.safe_load(Path(".buildkite/npu/pipeline-npu.yml").read_text())["steps"][0]
+    assert entry["if"] == (
+        'build.branch == "main" || !(build.pull_request.labels includes "backend-comparison-test" || '
+        'build.pull_request.labels includes "sglang-omni-test")'
+    )
+    rendered = _render_bootstrap_pipeline(
+        BOOTSTRAP_STEPS_TEMPLATE,
+        decision=resolve_ci_decision(["docker/Dockerfile.other"]),
+        path=Path(".buildkite/npu/bootstrap-upload-steps.yml"),
+    )
+    assert "sglang-omni-test" not in rendered
+    assert "backend-comparison-test" not in rendered
+
+
 def test_docs_only_allows_main_scheduled_nightly_weekly_only() -> None:
     """skip_all: no PR labels; main + NIGHTLY=1 / WEEKLY=1 / NON_CRITICAL=1 still gates scheduled CI."""
     rendered = _render(["docs/foo.md"])

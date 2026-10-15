@@ -1,12 +1,14 @@
-ARG SGLANG_BASE_IMAGE=lmsysorg/sglang
-ARG SGLANG_BASE_TAG=v0.5.18-cu130-runtime
-FROM ${SGLANG_BASE_IMAGE}:${SGLANG_BASE_TAG}
+# Same CUDA 13 base as the pinned SGLang-Omni docker/Dockerfile.
+ARG SGLANG_BASE_IMAGE=lmsysorg/sglang@sha256:b1259f3ea3275f66237c498ea388919729018bc9f01c3d638391e06e2cf3f469
+FROM ${SGLANG_BASE_IMAGE}
 
-ARG APP_DIR=/workspace/vllm-omni
-ARG SGLANG_OMNI_COMMIT=627e74b8c01bfce3e2cec4d1b0a39adc695f68e8
+ARG APP_DIR=/opt/vllm-omni
+ARG SGLANG_OMNI_COMMIT=22d4ace88f9547777b819a69d7691204bb9ce847
+ARG VLLM_VERSION=0.31.0
 
 ENV VLLM_OMNI_VENV=/opt/vllm-omni-benchmark
-ENV VLLM_OMNI_PYTHON=${VLLM_OMNI_VENV}/bin/python
+ENV SGLANG_OMNI_EXECUTABLE=/opt/sglang/bin/sgl-omni
+ENV VLLM_OMNI_VERSION_OVERRIDE=0.0.0
 
 WORKDIR ${APP_DIR}
 COPY . .
@@ -15,12 +17,14 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends espeak-ng ffmpeg git jq sox libsox-fmt-all && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir "pytest>=8,<9" "pytest-asyncio==1.4.0" "pytest-xdist==3.8.0" uv && \
-    uv pip install --system --prerelease=allow \
+RUN uv pip install --python /opt/sglang/bin/python3 --prerelease=allow \
       "sglang-omni @ git+https://github.com/sgl-project/sglang-omni.git@${SGLANG_OMNI_COMMIT}" && \
-    uv pip install --system --no-deps einops "qwen-tts==0.1.1" && \
-    uv venv --python python3 "${VLLM_OMNI_VENV}" && \
-    uv pip install --python "${VLLM_OMNI_PYTHON}" "vllm==0.28.0" -r requirements/common.txt
+    uv pip install --python /opt/sglang/bin/python3 --no-deps "qwen-tts==0.1.1" && \
+    uv pip uninstall --python /opt/sglang/bin/python3 flashinfer-cubin flashinfer-jit-cache && \
+    uv venv --python /opt/sglang/bin/python3 "${VLLM_OMNI_VENV}" && \
+    VLLM_OMNI_TARGET_DEVICE=cuda uv pip install --python "${VLLM_OMNI_VENV}/bin/python" \
+      "vllm==${VLLM_VERSION}" -e ".[dev]"
 
-RUN ln -sf /usr/bin/python3 /usr/bin/python
+# pytest and the common benchmark client use vLLM; only the server uses SGLang.
+ENV PATH=${VLLM_OMNI_VENV}/bin:${PATH}
 ENTRYPOINT []

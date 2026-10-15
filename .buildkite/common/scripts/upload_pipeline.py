@@ -158,7 +158,8 @@ def _compute_bootstrap_if_exprs(*, decision, platform: str) -> dict[str, str]:
     nightly_label_if = NIGHTLY_LABEL_IF
     if platform == "cuda":
         nightly_label_if = (
-            f'({NIGHTLY_LABEL_IF}) || (build.branch != "main" && build.pull_request.labels includes "sglang-omni-test")'
+            f"({NIGHTLY_LABEL_IF}) || "
+            '(build.branch != "main" && build.pull_request.labels includes "backend-comparison-test")'
         )
     if platform == "npu":
         ready_upload = READY_LABEL_IF

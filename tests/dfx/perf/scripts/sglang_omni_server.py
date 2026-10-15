@@ -56,10 +56,6 @@ def sglang_server_entries(configs: list[dict[str, Any]]) -> list[tuple[dict[str,
         if config.get("server_type") != "sglang-omni":
             continue
         params = config["server_params"]
-        hardware: dict[str, Any] = next(
-            (item["hardware_marks"] for item in config.get("mark", []) if isinstance(item, dict)),
-            {},
-        )
         entries.append(
             (
                 {
@@ -67,7 +63,6 @@ def sglang_server_entries(configs: list[dict[str, Any]]) -> list[tuple[dict[str,
                     "model": params["model"],
                     "serve_args": _serve_args(params.get("serve_args", {})),
                     "env": params.get("env", {}),
-                    "resource_label": hardware.get("res", {}).get("cuda", "na"),
                 },
                 config["test_name"],
             )
@@ -84,7 +79,6 @@ class SglangOmniServer:
         self.port = _open_port()
         self._args = config["serve_args"]
         self._env = config["env"]
-        self.resource_label = config["resource_label"]
         self._proc: subprocess.Popen[Any] | None = None
 
     def __enter__(self) -> SglangOmniServer:
