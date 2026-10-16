@@ -849,7 +849,7 @@ vllm serve "$MODEL" --omni --task-type fl2va --trust-remote-code \
 ```
 
 The initial control path uses resident BF16 weights and tensor parallelism.
-Reference/keyframe conditioning, sequence parallelism, approximate cache acceleration and
+Reference/keyframe conditioning, visual timeline guides, sequence parallelism, approximate cache acceleration and
 quantized control execution require separate support; do not combine them with
 this configuration. Control/Turbo combinations need their own validation and
 are not established by ordinary H3 Turbo results.

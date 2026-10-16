@@ -691,6 +691,7 @@ def test_encoder_conditioning_keeps_control_separate_from_latent_edit(monkeypatc
         audio_condition=None,
         audio_condition_lengths=(),
         ref_blocks=(),
+        guide_blocks=(),
         keyframe_frame_indices=(),
         video_edit_clean_rows=None,
         video_edit_mask=None,
@@ -714,6 +715,11 @@ def test_encoder_conditioning_keeps_control_separate_from_latent_edit(monkeypatc
     assert context["control_context_scale"] == 0.5
     assert context["video_edit_clean_rows"] is None
     assert context["audio_edit_clean_rows"] is None
+
+    conditioning.guide_blocks = ({"kind": "image", "frame_index": 0, "latent_h": 2, "latent_w": 2},)
+    with pytest.raises(pipeline_module.OmniClientError, match="visual timeline guides"):
+        pipeline._prepare_encoder_conditioning_inputs(conditioning, sampling)
+    conditioning.guide_blocks = ()
 
     # A second DiT pass must not reuse control rows encoded for a smaller canvas.
     target = pipeline_module.MiniMaxH3LatentUpscaleTarget(latent_height=4, latent_width=4, scale=2.0)
