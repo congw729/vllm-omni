@@ -24,12 +24,12 @@
     },
     "benchmark_params": [
       {
-        "name": "text_audio_smoke",
+        "name": "text_audio_latency",
         "dataset_name": "seed-tts-text",
         "dataset_path": "linyueqian/seed-tts-eval-subset",
         "backend": "openai-chat-omni",
         "endpoint": "/v1/chat/completions",
-        "num_prompts": [1],
+        "num_prompts": [20],
         "max_concurrency": [1],
         "num_warmups": 2,
         "seed": 0,

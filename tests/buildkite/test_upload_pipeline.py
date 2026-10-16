@@ -132,7 +132,7 @@ def test_backend_comparison_deploy_uses_both_requested_gpus() -> None:
     assert deploy["stages"]["vocoder"] == {"process": "vocoder", "gpu": 1}
 
 
-def test_qwen3_omni_comparison_starts_with_one_text_audio_request() -> None:
+def test_qwen3_omni_comparison_runs_twenty_text_audio_requests_serially() -> None:
     configs = yaml.safe_load(Path("tests/dfx/perf/tests/test_qwen3_omni_sglang.json").read_text())
     assert len(configs) == 1
     config = configs[0]
@@ -151,7 +151,8 @@ def test_qwen3_omni_comparison_starts_with_one_text_audio_request() -> None:
     }
     assert len(config["benchmark_params"]) == 1
     workload = config["benchmark_params"][0]
-    assert workload["num_prompts"] == workload["max_concurrency"] == [1]
+    assert workload["num_prompts"] == [20]
+    assert workload["max_concurrency"] == [1]
     assert workload["num_warmups"] == 2
     assert workload["dataset_name"] == "seed-tts-text"
     assert workload["backend"] == "openai-chat-omni"
