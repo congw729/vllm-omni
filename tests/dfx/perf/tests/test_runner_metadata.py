@@ -55,19 +55,23 @@ def test_default_runner_discovery_excludes_sglang():
     assert all(cfg.get("server_type", "vllm-omni") == "vllm-omni" for cfg in run_benchmark.BENCHMARK_CONFIGS)
 
 
-def test_explicit_sglang_config_uses_shared_marks(monkeypatch):
+@pytest.mark.parametrize(
+    ("config_name", "model_type"),
+    [("test_qwen3_tts_sglang.json", "tts"), ("test_qwen3_omni_sglang.json", "omni")],
+)
+def test_explicit_sglang_config_uses_shared_marks(monkeypatch, config_name: str, model_type: str):
     import runpy
     import sys
     from pathlib import Path
 
-    config = Path(__file__).with_name("test_qwen3_tts_sglang.json")
+    config = Path(__file__).with_name(config_name)
     runner = Path(__file__).parents[1] / "scripts" / "run_benchmark.py"
     monkeypatch.setattr(sys, "argv", ["pytest", "--test-config-file", str(config)])
     module = runpy.run_path(str(runner))
     assert module["SERVER_TYPE"] == "sglang-omni"
     assert len(module["paired_benchmark_params"]) == 1
     names = {mark.name for mark in module["paired_benchmark_params"][0].marks}
-    assert {"gpu", "cuda", "H100", "cards_2", "full_model", "tts"} <= names
+    assert {"gpu", "cuda", "H100", "cards_2", "full_model", model_type} <= names
 
 
 def test_sglang_uses_common_client_metadata(monkeypatch):
