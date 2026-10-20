@@ -12,7 +12,7 @@ steps:
     agents:
       queue: medium_cpu_queue_premerge
 
-  - label: ":speaker: SGLang-Omni · Qwen3-Omni · 2-GPU Latency (20 prompts, concurrency 1)"
+  - label: ":speaker: SGLang-Omni · Qwen3-Omni · 2-GPU Audio (10 prompts, 0.1 req/s)"
     key: nightly-sglang-omni-qwen3-omni
     depends_on: image-build-sglang-omni
     timeout_in_minutes: 90

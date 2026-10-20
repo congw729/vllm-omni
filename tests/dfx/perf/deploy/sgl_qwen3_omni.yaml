@@ -13,9 +13,23 @@ stages:
     gpu: 0
     # The pinned backend reserves 0.05 of this budget for the encoders.
     gpu_memory_fraction: 0.90
+    engine:
+      disable_radix_cache: true
   talker_ar:
     gpu: 1
     gpu_memory_fraction: 0.60
+    engine:
+      max_running_requests: 64
+      disable_radix_cache: true
+    factory:
+      codec_coalesce_first_frames: 4
+      codec_coalesce_early_frames: 0
+      codec_coalesce_frames: 25
   code2wav:
     gpu: 1
     gpu_memory_fraction: 0.10
+    # Match qwen3_omni_moe.yaml's first/steady/left-context codec windows.
+    factory:
+      initial_codec_chunk_frames: 4
+      stream_chunk_size: 25
+      left_context_size: 25

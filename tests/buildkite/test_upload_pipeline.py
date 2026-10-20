@@ -132,7 +132,7 @@ def test_backend_comparison_deploy_uses_both_requested_gpus() -> None:
     assert deploy["stages"]["vocoder"] == {"process": "vocoder", "gpu": 1}
 
 
-def test_qwen3_omni_comparison_runs_twenty_text_audio_requests_serially() -> None:
+def test_qwen3_omni_comparison_matches_random_audio_baseline() -> None:
     configs = yaml.safe_load(Path("tests/dfx/perf/tests/test_qwen3_omni_sglang.json").read_text())
     assert len(configs) == 1
     config = configs[0]
@@ -151,14 +151,37 @@ def test_qwen3_omni_comparison_runs_twenty_text_audio_requests_serially() -> Non
     }
     assert len(config["benchmark_params"]) == 1
     workload = config["benchmark_params"][0]
-    assert workload["num_prompts"] == [20]
-    assert workload["max_concurrency"] == [1]
+    baseline = yaml.safe_load(Path("tests/dfx/perf/tests/test_qwen3_omni_async_chunk.json").read_text())[0]
+    # Only the first, audio-in/text+audio-out workload; do not copy the sweep.
+    expected = {key: value for key, value in baseline["benchmark_params"][0].items() if key != "baseline"}
+    assert {key: workload[key] for key in expected} == expected
+    assert "max_concurrency" not in workload
     assert workload["num_warmups"] == 2
-    assert workload["dataset_name"] == "seed-tts-text"
-    assert workload["backend"] == "openai-chat-omni"
-    assert workload["endpoint"] == "/v1/chat/completions"
+    assert workload["seed"] == 0
     assert workload["extra_body"]["modalities"] == ["text", "audio"]
     assert workload["extra_body"]["audio"]["format"] == "wav"
+    vllm_deploy = yaml.safe_load(Path("vllm_omni/deploy/qwen3_omni_moe.yaml").read_text())
+    talker_sampling = vllm_deploy["stages"][1]["default_sampling_params"]
+    assert workload["extra_body"]["seed"] == talker_sampling["seed"]
+    for parameter in ("temperature", "top_k", "repetition_penalty"):
+        assert workload["extra_body"][f"talker_{parameter}"] == talker_sampling[parameter]
+    assert workload["extra_body"]["talker_max_new_tokens"] == talker_sampling["max_tokens"]
+    assert deploy["stages"]["thinker"]["engine"]["disable_radix_cache"]
+    assert deploy["stages"]["talker_ar"]["engine"] == {
+        "max_running_requests": vllm_deploy["stages"][1]["max_num_seqs"],
+        "disable_radix_cache": True,
+    }
+    chunks = vllm_deploy["connectors"]["connector_of_shared_memory"]["extra"]
+    assert deploy["stages"]["code2wav"]["factory"] == {
+        "initial_codec_chunk_frames": chunks["initial_codec_chunk_frames"],
+        "stream_chunk_size": chunks["codec_chunk_frames"],
+        "left_context_size": chunks["codec_left_context_frames"],
+    }
+    assert deploy["stages"]["talker_ar"]["factory"] == {
+        "codec_coalesce_first_frames": chunks["initial_codec_chunk_frames"],
+        "codec_coalesce_early_frames": 0,
+        "codec_coalesce_frames": chunks["codec_chunk_frames"],
+    }
 
 
 def test_backend_comparison_labels_skip_npu_entry_only_for_prs() -> None:

@@ -18,12 +18,20 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN uv pip install --python /opt/sglang/bin/python3 --prerelease=allow \
-      "sglang-omni @ git+https://github.com/sgl-project/sglang-omni.git@${SGLANG_OMNI_COMMIT}" && \
+      "sglang-omni @ git+https://github.com/sgl-project/sglang-omni.git@${SGLANG_OMNI_COMMIT}" \
+      "pytest>=8" && \
     uv pip install --python /opt/sglang/bin/python3 --no-deps "qwen-tts==0.1.1" && \
     uv pip uninstall --python /opt/sglang/bin/python3 flashinfer-cubin flashinfer-jit-cache && \
     uv venv --python /opt/sglang/bin/python3 "${VLLM_OMNI_VENV}" && \
     VLLM_OMNI_TARGET_DEVICE=cuda uv pip install --python "${VLLM_OMNI_VENV}/bin/python" \
       "vllm==${VLLM_VERSION}" -e ".[dev]"
+
+# Keep fixed-output benchmark requests from stopping at EOS in the Thinker.
+RUN cd "$(/opt/sglang/bin/python3 -c 'import sysconfig; print(sysconfig.get_path("purelib"))')" && \
+    git apply "${APP_DIR}/docker/patches/sglang-omni-ignore-eos.patch"
+
+RUN CUDA_VISIBLE_DEVICES="" HF_HUB_OFFLINE=1 /opt/sglang/bin/python3 -m pytest \
+      --noconftest -o addopts='' -q tests/dfx/perf/tests/test_sglang_sampling.py
 
 # pytest and the common benchmark client use vLLM; only the server uses SGLang.
 ENV PATH=${VLLM_OMNI_VENV}/bin:${PATH}
