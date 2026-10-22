@@ -29,7 +29,7 @@ import os
 import tempfile
 import time
 from collections.abc import Mapping, Sequence
-from contextlib import suppress
+from contextlib import ExitStack, suppress
 from http import HTTPStatus
 from numbers import Integral
 from pathlib import Path
@@ -366,7 +366,7 @@ async def _cleanup_video(video_id: str):
 def _cleanup_video_references(
     reference_video: ReferenceVideo | None,
     reference_audio: ReferenceAudio | None,
-    control_path: str | list[str] | None = None,
+    control_files: ExitStack | None = None,
     latent_edit_input: LatentEditInput | None = None,
 ) -> None:
     if reference_video is not None:
@@ -378,9 +378,8 @@ def _cleanup_video_references(
         for path in cleanup_paths:
             if os.path.exists(path):
                 os.unlink(path)
-    for path in _reference_list(control_path):
-        if os.path.exists(path):
-            os.unlink(path)
+    if control_files is not None:
+        control_files.close()
     if latent_edit_input is not None:
         for path in latent_edit_input.cleanup_paths:
             if os.path.exists(path):
@@ -422,14 +421,14 @@ async def _run_video_generation_job(
     reference_image: ReferenceImage | None = None,
     reference_video: ReferenceVideo | None = None,
     reference_audio: ReferenceAudio | None = None,
-    control_path: str | list[str] | None = None,
+    control_files: ExitStack | None = None,
     app_state: Any | None = None,
     latent_edit_input: LatentEditInput | None = None,
 ) -> None:
     job = await VIDEO_STORE.get(video_id)
     if job is None:
         logger.warning("Video job %s missing before generation task started; skipping", video_id)
-        _cleanup_video_references(reference_video, reference_audio, control_path, latent_edit_input)
+        _cleanup_video_references(reference_video, reference_audio, control_files, latent_edit_input)
         _cleanup_timeline_guides(request)
         return
 
@@ -507,7 +506,7 @@ async def _run_video_generation_job(
         await VIDEO_STORE.pop(video_id)
         raise
     finally:
-        _cleanup_video_references(reference_video, reference_audio, control_path, latent_edit_input)
+        _cleanup_video_references(reference_video, reference_audio, control_files, latent_edit_input)
         _cleanup_timeline_guides(request)
 
 
@@ -1117,7 +1116,7 @@ async def _parse_video_form(
     ReferenceImage | None,
     ReferenceVideo | None,
     ReferenceAudio | None,
-    str | list[str] | None,
+    ExitStack | None,
     LatentEditInput | None,
 ]:
     """FastAPI dependency that parses video form data, validates inputs,
@@ -1388,8 +1387,9 @@ async def _parse_video_form(
             cleanup_paths=cleanup_paths,
         )
 
-    control_paths: list[str] = []
+    control_files = None
     if normalized_control_type is not None:
+        control_files = ExitStack()
         try:
             for role, upload in (
                 ("control", control_reference),
@@ -1403,7 +1403,8 @@ async def _parse_video_form(
                     max_bytes=CONTROL_REFERENCE_MAX_BYTES,
                     field_name=f"{role}_reference",
                 )
-                control_paths.append(path)
+                # Register cleanup while the server-created path is still owned here.
+                control_files.callback(Path(path).unlink, missing_ok=True)
                 if h3_control:
                     # Decode validation is shared media logic; request ownership
                     # remains here and covers partial persistence failures too.
@@ -1411,12 +1412,11 @@ async def _parse_video_form(
                 assert request.extra_params is not None
                 request.extra_params[normalized_control_type][f"{role}_path"] = path
         except InvalidInputReferenceError as exc:
-            _cleanup_video_references(reference_video, reference_audio, control_paths)
+            _cleanup_video_references(reference_video, reference_audio, control_files)
             raise HTTPException(400, detail=str(exc)) from exc
         except (asyncio.CancelledError, HTTPException, OSError, TypeError, ValueError):
-            _cleanup_video_references(reference_video, reference_audio, control_paths)
+            _cleanup_video_references(reference_video, reference_audio, control_files)
             raise
-    control_path = control_paths or None
 
     latent_edit_input: LatentEditInput | None = None
     if has_latent_edit:
@@ -1447,7 +1447,7 @@ async def _parse_video_form(
             for path in source_paths:
                 with suppress(OSError):
                     os.unlink(path)
-            _cleanup_video_references(reference_video, reference_audio, control_path)
+            _cleanup_video_references(reference_video, reference_audio, control_files)
             raise
 
     if parsed_timeline_guides is not None:
@@ -1455,7 +1455,7 @@ async def _parse_video_form(
         try:
             request._timeline_guide_input = await _persist_timeline_guides(guides, kinds, guide_files or [])
         except (asyncio.CancelledError, Exception):
-            _cleanup_video_references(reference_video, reference_audio, control_path, latent_edit_input)
+            _cleanup_video_references(reference_video, reference_audio, control_files, latent_edit_input)
             raise
 
     return (
@@ -1465,6 +1465,6 @@ async def _parse_video_form(
         reference_image,
         reference_video,
         reference_audio,
-        control_path,
+        control_files,
         latent_edit_input,
     )
