@@ -587,8 +587,11 @@ async def _persist_uploaded_control_reference(
             status_code=HTTPStatus.BAD_REQUEST.value,
             detail=f"{field_name} must be an image or video file.",
         )
-    if not suffix:
-        suffix = ".png" if kind == "image" else ".mp4"
+    # Persist a trusted suffix rather than text from the upload filename.
+    suffix = next(
+        (allowed for allowed in supported_suffixes if allowed == suffix),
+        ".png" if kind == "image" else ".mp4",
+    )
     return await _persist_uploaded_reference(
         upload,
         field_name=field_name,

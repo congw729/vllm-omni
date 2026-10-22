@@ -3084,6 +3084,10 @@ class MiniMaxH3Pipeline(
         control_rows = None
         control_scale = control["control_context_scale"] if control is not None else 1.0
         if control is not None and control_scale != 0:
+            if any(block["kind"] in ("image", "video", "video_audio") for block in conditioning.guide_blocks):
+                raise OmniClientError(
+                    "H3 control does not support visual timeline guides; control rows cover only the target canvas"
+                )
             try:
                 media = {
                     role: load_control_pixels(
