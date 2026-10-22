@@ -1155,6 +1155,8 @@ async def _parse_video_form(
             ),
         )
 
+    if model == "auto":
+        model = None
     request_data: dict[str, Any] = {
         "prompt": prompt,
         "model": model,

@@ -446,6 +446,7 @@ def test_vae_control_uses_normalized_posterior_mode():
         {"diffusion_offload_config": {"mode": "module", "components": ["dit"]}},
         {"diffusion_offload_config": {"mode": "layer", "components": ["dit"]}},
         {"enable_cpu_offload": True},
+        {"kv_offload_config": {"mode": "on"}},
     ],
 )
 def test_startup_rejects_public_and_legacy_offload(control_startup, offload):
@@ -465,6 +466,24 @@ def test_control_rejects_secondary_or_ref2va_partition_before_loading(control_st
         with pytest.raises(ValueError, match="FL2VA checkpoint partition"):
             pipeline_module.MiniMaxH3Pipeline(od_config=config)
         resolve_root.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "partition,error",
+    [("ref2va", "FL2VA checkpoint partition"), ("fl2va", "FastH3 modular checkpoints")],
+)
+def test_control_checks_modular_metadata_partition(control_startup, tmp_path, monkeypatch, partition, error):
+    pipeline_module, config = control_startup
+    (tmp_path / "fastvideo_inference.json").write_text("{}")
+    config.model = str(tmp_path)
+    config.task_type = "auto"
+    # Metadata parsing has its own contract tests. Exercise its resolved partition
+    # at the ControlNet boundary before any base components or weights are loaded.
+    spec = SimpleNamespace(partition=partition)
+    with patch.object(pipeline_module.FastH3CheckpointSpec, "from_metadata", return_value=spec) as read_metadata:
+        with pytest.raises(ValueError, match=error):
+            pipeline_module.MiniMaxH3Pipeline(od_config=config)
+        read_metadata.assert_called_once_with({})
 
 
 def test_startup_accepts_resident_default_policy(control_startup):

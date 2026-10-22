@@ -209,7 +209,7 @@ def build_control_rows(
 class MiniMaxH3ControlBlock(MiniMaxH3DiTBlock):
     def __init__(self, arch: MiniMaxH3DiTArchConfig, index: int):
         prefix = f"controlnet.control_blocks.{index}"
-        super().__init__(arch, None, prefix=prefix)
+        super().__init__(arch, None, prefix=prefix, layer_index=index)
         if index == 0:
             self.before_proj = ColumnParallelLinear(
                 arch.hidden_size,
