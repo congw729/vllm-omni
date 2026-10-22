@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM-Omni project
 
 from contextlib import ExitStack, nullcontext
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -45,6 +46,7 @@ class CPUAttention(nn.Module):
 @pytest.fixture
 def cpu_layers(monkeypatch):
     monkeypatch.setattr(blocks, "Attention", CPUAttention)
+    monkeypatch.setattr(h3.current_omni_platform, "is_cuda", lambda: False)
     with ExitStack() as stack:
         for module in (
             "vllm.distributed",
@@ -737,10 +739,11 @@ def test_encoder_conditioning_keeps_control_separate_from_latent_edit(monkeypatc
     assert context["video_edit_clean_rows"] is None
     assert context["audio_edit_clean_rows"] is None
 
-    conditioning.guide_blocks = ({"kind": "image", "frame_index": 0, "latent_h": 2, "latent_w": 2},)
-    with pytest.raises(pipeline_module.OmniClientError, match="visual timeline guides"):
-        pipeline._prepare_encoder_conditioning_inputs(conditioning, sampling)
-    conditioning.guide_blocks = ()
+    guided_conditioning = replace(
+        conditioning, guide_blocks=({"kind": "image", "frame_index": 0, "latent_h": 2, "latent_w": 2},)
+    )
+    with pytest.raises(pipeline_module.OmniClientError, match="timeline guides"):
+        pipeline._prepare_encoder_conditioning_inputs(guided_conditioning, sampling)
 
     # A second DiT pass must not reuse control rows encoded for a smaller canvas.
     target = pipeline_module.MiniMaxH3LatentUpscaleTarget(latent_height=4, latent_width=4, scale=2.0)
